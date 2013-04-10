@@ -122,9 +122,18 @@ namespace EHRLucene.Domain
                 str += _removeSpecialCharacters(patient.DateBirthday);
             }
 
+            var i = 1;
             foreach (var h in hospital)
             {
-                str += " Hospital:" + h;
+                if (hospital.Count > 1 && i < hospital.Count)
+                {
+                    str += " Hospital:" + h + " OR ";
+                }
+                else
+                {
+                    str += " Hospital:" + h;
+                }
+                i++;
             }
 
             return str;
