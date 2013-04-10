@@ -16,6 +16,8 @@ using Version = Lucene.Net.Util.Version;
 
 namespace EHRLucene.Domain
 {
+
+
     public class LuceneClient
     {
 
@@ -74,25 +76,29 @@ namespace EHRLucene.Domain
 
         private void _addToLuceneIndex(IPatientDTO patient, IndexWriter writer)
         {
-            // remove older index entry
-            var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString()));
-            writer.DeleteDocuments(searchQuery);
-
+            RemoveIndex(patient, writer);
             var doc = new Document();
+            AddFields(patient, doc);
+            writer.AddDocument(doc);
+        }
 
+        private void AddFields(IPatientDTO patient, Document doc)
+        {
             doc.Add(new Field("Id", patient.Id.ToString(), Field.Store.YES, Field.Index.NOT_ANALYZED));
             doc.Add(new Field("Name", patient.Name, Field.Store.YES, Field.Index.ANALYZED));
-
-            if (!string.IsNullOrEmpty(patient.CPF))
-            {
-                doc.Add(new Field("CPF", patient.CPF, Field.Store.YES, Field.Index.ANALYZED));
-            }
-
-            doc.Add(new Field("DateBirthday", patient.DateBirthday, Field.Store.NO, Field.Index.ANALYZED));
             doc.Add(new Field("Hospital", patient.Hospital.ToString(), Field.Store.YES, Field.Index.ANALYZED));
 
-            // add entry to index
-            writer.AddDocument(doc);
+            if (!string.IsNullOrEmpty(patient.CPF))
+                doc.Add(new Field("CPF", patient.CPF, Field.Store.YES, Field.Index.ANALYZED));
+
+            if (!string.IsNullOrEmpty(patient.DateBirthday))
+                doc.Add(new Field("DateBirthday", patient.DateBirthday, Field.Store.YES, Field.Index.ANALYZED));
+        }
+
+        private void RemoveIndex(IPatientDTO patient, IndexWriter writer)
+        {
+            var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString()));
+            writer.DeleteDocuments(searchQuery);
         }
 
         public IEnumerable<IPatientDTO> SimpleSearch(string input)
@@ -101,22 +107,46 @@ namespace EHRLucene.Domain
 
         }
 
-        public IEnumerable<IPatientDTO> AdvancedSearch(string input)
+        public IEnumerable<IPatientDTO> AdvancedSearch(IPatientDTO patient, List<string> hospital)
         {
-            return _inputIsNotNullOrEmpty(input) ? new List<IPatientDTO>() : _AdvancedSearch(input);
+            return patient == null ? new List<IPatientDTO>() : _AdvancedSearch(patient, hospital);
         }
 
-        private IEnumerable<IPatientDTO> _AdvancedSearch(string searchQuery)
+        private string TreatCharacters(IPatientDTO patient, List<string> hospital)
         {
-            searchQuery = _removeSpecialCharacters(searchQuery);
+            var str = "Name:";
+            str += _removeSpecialCharacters(patient.Name);
+            if (!string.IsNullOrEmpty(patient.DateBirthday))
+            {
+                str += " DateBirthday:";
+                str += _removeSpecialCharacters(patient.DateBirthday);
+            }
+
+            foreach (var h in hospital)
+            {
+                str += " Hospital:" + h;
+            }
+
+            return str;
+        }
+
+        private IEnumerable<IPatientDTO> _AdvancedSearch(IPatientDTO searchQuery, List<string> hospital)
+        {
+            var searchQueryStr = TreatCharacters(searchQuery, hospital);
 
             using (var searcher = new IndexSearcher(_directory, false))
             {
+
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
-                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Name", "DateBirthday"}, analyzer);
-                parser.DefaultOperator= QueryParser.Operator.AND;
-                var query = parseQuery(searchQuery, parser);
-                var hits = searcher.Search(query, null, 10, Sort.RELEVANCE).ScoreDocs;
+
+                string[] array = CreatParameters(searchQuery, hospital);
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
+                if (array.Count() > 1)
+                    parser.DefaultOperator = QueryParser.Operator.AND;
+
+
+                var query = parseQuery(searchQueryStr, parser);
+                var hits = searcher.Search(query, null, 5000000, Sort.RELEVANCE).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
@@ -127,6 +157,32 @@ namespace EHRLucene.Domain
             }
         }
 
+        private string[] CreatParameters(IPatientDTO searchQuery, List<string> hospital)
+        {
+            var parameters = new List<string>();
+
+            if (!string.IsNullOrEmpty(searchQuery.Name))
+                parameters.Add("Name");
+
+            if (!string.IsNullOrEmpty(searchQuery.DateBirthday))
+                parameters.Add("DateBirthday");
+
+            if (hospital != null && hospital.Count > 0)
+                parameters.Add("Hospital");
+
+            return parameters.ToArray();
+        }
+
+
+
+        private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
+        {
+            var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Name", "DateBirthday" }, analyzer);
+            parser.DefaultOperator = QueryParser.Operator.AND;
+            return parser;
+        }
+
+
         private IEnumerable<IPatientDTO> _SimpleSearch(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
@@ -134,7 +190,7 @@ namespace EHRLucene.Domain
             using (var searcher = new IndexSearcher(_directory, false))
             {
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
-                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Name", "CPF"}, analyzer);
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Name", "CPF" }, analyzer);
                 var query = parseQuery(searchQuery, parser);
                 var hits = searcher.Search(query, null, 10, Sort.RELEVANCE).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
@@ -163,7 +219,7 @@ namespace EHRLucene.Domain
             Query query;
             try
             {
-                query = parser.Parse(searchQuery.Trim());
+                query = parser.Parse(searchQuery);
             }
             catch (ParseException)
             {
@@ -187,7 +243,7 @@ namespace EHRLucene.Domain
                 Id = doc.Get("Id"),
                 Name = doc.Get("Name"),
                 Hospital = enumHospital ? valor : DbEnum.sumario,
-                DateBirthday = "DateBirthday"
+                DateBirthday = doc.Get("DateBirthday"),
             };
         }
 
