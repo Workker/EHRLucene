@@ -30,7 +30,7 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            _luceneDir = Path.Combine("E://Projects//EHR//lucene_index");
+            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index");
         }
 
         public void CriarDiretorio()
@@ -116,7 +116,7 @@ namespace EHRLucene.Domain
         {
             var str = "Name:";
             str += _removeSpecialCharacters(patient.Name);
-            if (!string.IsNullOrEmpty(patient.DateBirthday))
+            if (!string.IsNullOrEmpty(patient.DateBirthday) && patient.DateBirthday != "//")
             {
                 str += " DateBirthday:";
                 str += _removeSpecialCharacters(patient.DateBirthday);
@@ -164,7 +164,7 @@ namespace EHRLucene.Domain
             if (!string.IsNullOrEmpty(searchQuery.Name))
                 parameters.Add("Name");
 
-            if (!string.IsNullOrEmpty(searchQuery.DateBirthday))
+            if (!string.IsNullOrEmpty(searchQuery.DateBirthday) && searchQuery.DateBirthday != "//")
                 parameters.Add("DateBirthday");
 
             if (hospital != null && hospital.Count > 0)
