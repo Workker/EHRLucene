@@ -30,7 +30,7 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index");
+            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath,"lucene_index");
         }
 
         public void CriarDiretorio()
@@ -91,8 +91,8 @@ namespace EHRLucene.Domain
             if (!string.IsNullOrEmpty(patient.CPF))
                 doc.Add(new Field("CPF", patient.CPF, Field.Store.YES, Field.Index.ANALYZED));
 
-            if (!string.IsNullOrEmpty(patient.DateBirthday))
-                doc.Add(new Field("DateBirthday", patient.DateBirthday, Field.Store.YES, Field.Index.ANALYZED));
+            if (patient.DateBirthday.HasValue)
+                doc.Add(new Field("DateBirthday", patient.DateBirthday.Value.ToShortDateString(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
         private void RemoveIndex(IPatientDTO patient, IndexWriter writer)
@@ -116,10 +116,10 @@ namespace EHRLucene.Domain
         {
             var str = "Name:";
             str += _removeSpecialCharacters(patient.Name);
-            if (!string.IsNullOrEmpty(patient.DateBirthday) && patient.DateBirthday != "//")
+            if (patient.DateBirthday.HasValue && patient.DateBirthday.Value.ToShortDateString() != "//")
             {
                 str += " DateBirthday:";
-                str += _removeSpecialCharacters(patient.DateBirthday);
+                str += _removeSpecialCharacters(patient.DateBirthday.Value.ToShortDateString());
             }
 
             var i = 1;
@@ -173,7 +173,7 @@ namespace EHRLucene.Domain
             if (!string.IsNullOrEmpty(searchQuery.Name))
                 parameters.Add("Name");
 
-            if (!string.IsNullOrEmpty(searchQuery.DateBirthday) && searchQuery.DateBirthday != "//")
+            if (searchQuery.DateBirthday.HasValue && searchQuery.DateBirthday.Value.ToShortDateString() != "//")
                 parameters.Add("DateBirthday");
 
             if (hospital != null && hospital.Count > 0)
@@ -247,13 +247,20 @@ namespace EHRLucene.Domain
             DbEnum valor;
             var enumHospital = Enum.TryParse(doc.Get("Hospital"), true, out valor);
 
-            return new PatientDTO()
+            var patient = new PatientDTO()
             {
                 Id = doc.Get("Id"),
                 Name = doc.Get("Name"),
                 Hospital = enumHospital ? valor : DbEnum.sumario,
-                DateBirthday = doc.Get("DateBirthday"),
+                
             };
+
+            if(!string.IsNullOrEmpty(doc.Get("DateBirthday")))
+            {
+                patient.DateBirthday = Convert.ToDateTime(doc.Get("DateBirthday"));
+            }
+
+            return patient;
         }
 
         private void Optimize()
