@@ -1,25 +1,23 @@
-﻿using System.Collections.ObjectModel;
-using EHRIntegracao.Domain.Factorys;
+﻿using EHRIntegracao.Domain.Factorys;
 using EHRIntegracao.Domain.Services.DTO;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Web;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
 using Version = Lucene.Net.Util.Version;
 
 namespace EHRLucene.Domain
 {
-
-
     public class LuceneClient
     {
+<<<<<<< HEAD
 
         public LuceneClient(string path)
         {
@@ -37,6 +35,9 @@ namespace EHRLucene.Domain
         {
             if (!System.IO.Directory.Exists(_luceneDir)) System.IO.Directory.CreateDirectory(_luceneDir);
         }
+=======
+        #region Properties
+>>>>>>> TA758 - Pronto
 
         public string _luceneDir;
         private FSDirectory _directoryTemp;
@@ -52,6 +53,24 @@ namespace EHRLucene.Domain
             }
         }
 
+        #endregion
+
+        #region Contructors
+
+        public LuceneClient(string path)
+        {
+            InformarPath(path);
+            CreateDirectory();
+
+        }
+
+        #endregion
+
+        public void CreateDirectory()
+        {
+            if (!System.IO.Directory.Exists(_luceneDir)) System.IO.Directory.CreateDirectory(_luceneDir);
+        }
+
         public void AddUpdateLuceneIndex(PatientDTO patients)
         {
             AddUpdateLuceneIndex(new List<PatientDTO> { patients });
@@ -60,20 +79,16 @@ namespace EHRLucene.Domain
 
         public void AddUpdateLuceneIndex(IEnumerable<IPatientDTO> sampleDatas)
         {
-            // init lucene
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
             {
-                // add data to lucene search index (replaces older entries if any)
                 foreach (var sampleData in sampleDatas) _addToLuceneIndex(sampleData, writer);
-
-                // close handles
                 analyzer.Close();
-                writer.Close();
                 writer.Dispose();
             }
         }
 
+<<<<<<< HEAD
         private void _addToLuceneIndex(IPatientDTO patient, IndexWriter writer)
         {
             RemoveIndex(patient, writer);
@@ -96,9 +111,11 @@ namespace EHRLucene.Domain
         }
 
         private void RemoveIndex(IPatientDTO patient, IndexWriter writer)
+=======
+        public IPatientDTO SearchBy(string id)
+>>>>>>> TA758 - Pronto
         {
-            var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString()));
-            writer.DeleteDocuments(searchQuery);
+            return _inputIsNotNullOrEmpty(id) ? new PatientDTO() : _SearchBy(id);
         }
 
         public IEnumerable<IPatientDTO> SimpleSearch(string input)
@@ -112,6 +129,7 @@ namespace EHRLucene.Domain
             return patient == null ? new List<IPatientDTO>() : _AdvancedSearch(patient, hospital);
         }
 
+<<<<<<< HEAD
         private string TreatCharacters(IPatientDTO patient, List<string> hospital)
         {
             var str = "Name:";
@@ -138,34 +156,36 @@ namespace EHRLucene.Domain
 
             return str;
         }
+=======
+        //TODO: Remover se não for usado
+        //private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
+        //{
+        //    var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Name", "DateBirthday" }, analyzer);
+        //    parser.DefaultOperator = QueryParser.Operator.AND;
+        //    return parser;
+        //}
+>>>>>>> TA758 - Pronto
 
-        private IEnumerable<IPatientDTO> _AdvancedSearch(IPatientDTO searchQuery, List<string> hospital)
+        private IPatientDTO _SearchBy(string searchQuery)
         {
-            var searchQueryStr = TreatCharacters(searchQuery, hospital);
+            searchQuery = _removeSpecialCharacters(searchQuery);
 
             using (var searcher = new IndexSearcher(_directory, false))
             {
-
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
-
-                string[] array = CreatParameters(searchQuery, hospital);
-                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
-                if (array.Count() > 1)
-                    parser.DefaultOperator = QueryParser.Operator.AND;
-
-
-                var query = parseQuery(searchQueryStr, parser);
-                var hits = searcher.Search(query, null, 5000000, Sort.RELEVANCE).ScoreDocs;
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Id" }, analyzer);
+                var query = parseQuery(searchQuery, parser);
+                var hits = searcher.Search(query,10).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Close();
                 searcher.Dispose();
 
-                return results;
+                return results.First();
             }
         }
 
+<<<<<<< HEAD
         private string[] CreatParameters(IPatientDTO searchQuery, List<string> hospital)
         {
             var parameters = new List<string>();
@@ -192,6 +212,8 @@ namespace EHRLucene.Domain
         }
 
 
+=======
+>>>>>>> TA758 - Pronto
         private IEnumerable<IPatientDTO> _SimpleSearch(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
@@ -205,7 +227,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Close();
                 searcher.Dispose();
 
                 return results;
@@ -252,7 +273,11 @@ namespace EHRLucene.Domain
                 Id = doc.Get("Id"),
                 Name = doc.Get("Name"),
                 Hospital = enumHospital ? valor : DbEnum.sumario,
+<<<<<<< HEAD
                 
+=======
+                DateBirthday = Convert.ToDateTime(doc.Get("DateBirthday")),
+>>>>>>> TA758 - Pronto
             };
 
             if(!string.IsNullOrEmpty(doc.Get("DateBirthday")))
@@ -270,10 +295,108 @@ namespace EHRLucene.Domain
             {
                 analyzer.Close();
                 writer.Optimize();
-                writer.Close();
                 writer.Dispose();
             }
         }
 
+        private void InformarPath(string path)
+        {
+            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index");
+        }
+
+        private string TreatCharacters(IPatientDTO patient, List<string> hospital)
+        {
+            var str = "Name:";
+            str += _removeSpecialCharacters(patient.Name);
+            if (!string.IsNullOrEmpty(patient.DateBirthday.ToString()) && patient.DateBirthday.ToString() != "//")
+            {
+                str += " DateBirthday:";
+                str += _removeSpecialCharacters(patient.DateBirthday.ToString());
+            }
+
+            var i = 1;
+            foreach (var h in hospital)
+            {
+                if (hospital.Count > 1 && i < hospital.Count)
+                {
+                    str += " Hospital:" + h + " OR ";
+                }
+                else
+                {
+                    str += " Hospital:" + h;
+                }
+                i++;
+            }
+
+            return str;
+        }
+
+        private IEnumerable<IPatientDTO> _AdvancedSearch(IPatientDTO searchQuery, List<string> hospital)
+        {
+            var searchQueryStr = TreatCharacters(searchQuery, hospital);
+
+            using (var searcher = new IndexSearcher(_directory, false))
+            {
+
+                var analyzer = new StandardAnalyzer(Version.LUCENE_30);
+
+                string[] array = CreatParameters(searchQuery, hospital);
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
+                if (array.Count() > 1)
+                    parser.DefaultOperator = QueryParser.Operator.AND;
+
+                var query = parseQuery(searchQueryStr, parser);
+                var hits = searcher.Search(query, null, 5000000, Sort.RELEVANCE).ScoreDocs;
+                var results = _mapLuceneToDataList(hits, searcher);
+
+                analyzer.Close();
+                searcher.Dispose();
+
+                return results;
+            }
+        }
+
+        private string[] CreatParameters(IPatientDTO searchQuery, List<string> hospital)
+        {
+            var parameters = new List<string>();
+
+            if (!string.IsNullOrEmpty(searchQuery.Name))
+                parameters.Add("Name");
+
+            if (!string.IsNullOrEmpty(searchQuery.DateBirthday.ToString()) && searchQuery.DateBirthday.ToString() != "//")
+                parameters.Add("DateBirthday");
+
+            if (hospital != null && hospital.Count > 0)
+                parameters.Add("Hospital");
+
+            return parameters.ToArray();
+        }
+
+        private void _addToLuceneIndex(IPatientDTO patient, IndexWriter writer)
+        {
+            RemoveIndex(patient, writer);
+            var doc = new Document();
+            AddFields(patient, doc);
+            writer.AddDocument(doc);
+        }
+
+        private void AddFields(IPatientDTO patient, Document doc)
+        {
+            doc.Add(new Field("Id", patient.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Name", patient.Name, Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Hospital", patient.Hospital.ToString(), Field.Store.YES, Field.Index.ANALYZED));
+
+            if (!string.IsNullOrEmpty(patient.CPF))
+                doc.Add(new Field("CPF", patient.CPF, Field.Store.YES, Field.Index.ANALYZED));
+
+            if (!string.IsNullOrEmpty(patient.DateBirthday.ToString()))
+                doc.Add(new Field("DateBirthday", patient.DateBirthday.ToString(), Field.Store.YES, Field.Index.ANALYZED));
+        }
+
+        private void RemoveIndex(IPatientDTO patient, IndexWriter writer)
+        {
+            var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString()));
+            writer.DeleteDocuments(searchQuery);
+        }
     }
 }
