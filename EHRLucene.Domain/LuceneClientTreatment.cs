@@ -77,7 +77,6 @@ namespace EHRLucene.Domain
 
                     // close handles
                     analyzer.Close();
-                    writer.Close();
                     writer.Dispose();
                 }
             }
@@ -153,7 +152,6 @@ namespace EHRLucene.Domain
                     var results = _mapLuceneToDataList(hits, searcher);
 
                     analyzer.Close();
-                    searcher.Close();
                     searcher.Dispose();
 
                     return results;
@@ -190,7 +188,6 @@ namespace EHRLucene.Domain
                     var results = _mapLuceneToDataList(hits, searcher);
 
                     analyzer.Close();
-                    searcher.Close();
                     searcher.Dispose();
 
                     return results;
@@ -245,7 +242,6 @@ namespace EHRLucene.Domain
                 {
                     analyzer.Close();
                     writer.Optimize();
-                    writer.Close();
                     writer.Dispose();
                 }
             }
