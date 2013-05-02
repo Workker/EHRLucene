@@ -38,7 +38,7 @@ namespace EHRLucene.Domain
 
             private void InformarPath(string path)
             {
-                _luceneDir = Path.Combine("lucene_index_Treatment");
+                _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_Treatment");
             }
 
             public void CriarDiretorio()
@@ -83,7 +83,7 @@ namespace EHRLucene.Domain
 
             private void _addToLuceneIndex(ITreatmentDTO treatment, IndexWriter writer)
             {
-                RemoveIndex(treatment, writer);
+               // RemoveIndex(treatment, writer);
                 var doc = new Document();
                 AddFields(treatment, doc);
                 writer.AddDocument(doc);
@@ -106,12 +106,12 @@ namespace EHRLucene.Domain
 
             }
 
-            public IEnumerable<ITreatmentDTO> AdvancedSearch (List<string> medicalRecords)
+            public IEnumerable<ITreatmentDTO> AdvancedSearch(List<string> medicalRecords)
             {
-                return  _AdvancedSearch( medicalRecords);
+                return _AdvancedSearch(medicalRecords);
             }
 
-            private string TreatCharacters( List<string> medicalRecords)
+            private string TreatCharacters(List<string> medicalRecords)
             {
                 var str = "";
 
@@ -132,19 +132,19 @@ namespace EHRLucene.Domain
                 return str;
             }
 
-            private IEnumerable<ITreatmentDTO> _AdvancedSearch( List<string> medicalRecords)
+            private IEnumerable<ITreatmentDTO> _AdvancedSearch(List<string> medicalRecords)
             {
-                var searchQueryStr = TreatCharacters( medicalRecords);
+                var searchQueryStr = TreatCharacters(medicalRecords);
 
                 using (var searcher = new IndexSearcher(_directory, false))
                 {
 
                     var analyzer = new StandardAnalyzer(Version.LUCENE_30);
 
-                    string[] array = CreatParameters( medicalRecords);
+                    string[] array = CreatParameters(medicalRecords);
                     var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
-                    if (array.Count() > 1)
-                        parser.DefaultOperator = QueryParser.Operator.AND;
+
+                    parser.DefaultOperator = QueryParser.Operator.AND;
 
 
                     var query = parseQuery(searchQueryStr, parser);
@@ -158,7 +158,7 @@ namespace EHRLucene.Domain
                 }
             }
 
-            private string[] CreatParameters( List<string> hospital)
+            private string[] CreatParameters(List<string> hospital)
             {
                 var parameters = new List<string>();
                 parameters.Add("Id");
