@@ -229,6 +229,7 @@ namespace EHRLucene.Domain
 
             private ITreatmentDTO _mapLuceneDocumentToData(Document doc)
             {
+
                 var treatment = new TreatmentDTO()
                 {
                     Id = doc.Get("Id"),
