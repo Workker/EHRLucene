@@ -68,9 +68,9 @@ namespace EHRLucene.Domain
             }
         }
 
-        public IPatientDTO SearchBy(string id)
+        public IPatientDTO SearchBy(string cpf)
         {
-            return _inputIsNotNullOrEmpty(id) ? new PatientDTO() : _SearchBy(id);
+            return _inputIsNotNullOrEmpty(cpf) ? new PatientDTO() : _SearchBy(cpf);
         }
 
         public IEnumerable<IPatientDTO> SimpleSearch(string input)
@@ -101,7 +101,7 @@ namespace EHRLucene.Domain
             using (var searcher = new IndexSearcher(_directory, false))
             {
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
-                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Id" }, analyzer);
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "CPF" }, analyzer);
                 var query = parseQuery(searchQuery, parser);
                 var hits = searcher.Search(query, 10).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
@@ -171,6 +171,7 @@ namespace EHRLucene.Domain
             {
                 Id = doc.Get("Id"),
                 Name = doc.Get("Name"),
+                CPF = doc.Get("CPF"),
                 Hospital = enumHospital ? valor : DbEnum.sumario,
                 DateBirthday = Convert.ToDateTime(doc.Get("DateBirthday")),
 
