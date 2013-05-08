@@ -10,5 +10,10 @@ namespace EHRLucene.Test
     [TestFixture]
     public class TestBase
     {
+        [Test]
+        public void Test()
+        {
+            Assert.True(true);
+        }
     }
 }
