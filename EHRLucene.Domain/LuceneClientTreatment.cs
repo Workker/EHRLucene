@@ -1,11 +1,10 @@
 ﻿using System.Collections.ObjectModel;
-using EHRIntegracao.Domain.Factorys;
-using EHRIntegracao.Domain.Services.DTO;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Web;
+using EHR.CoreShared;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;

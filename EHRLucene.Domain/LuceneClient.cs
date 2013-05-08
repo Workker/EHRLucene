@@ -1,5 +1,5 @@
-﻿using EHRIntegracao.Domain.Factorys;
-using EHRIntegracao.Domain.Services.DTO;
+﻿
+using EHR.CoreShared;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
