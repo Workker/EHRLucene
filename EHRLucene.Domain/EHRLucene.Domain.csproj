@@ -34,7 +34,7 @@
   <ItemGroup>
     <Reference Include="EHR.CoreShared, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\LibEHR\EHR.CoreShared.dll</HintPath>
+      <HintPath>..\..\..\LibEHR\EHR.CoreShared.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net">
       <HintPath>..\packages\Lucene.Net.3.0.3\lib\NET40\Lucene.Net.dll</HintPath>
