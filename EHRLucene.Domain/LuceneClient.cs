@@ -208,7 +208,8 @@ namespace EHRLucene.Domain
             if (!string.IsNullOrEmpty(patient.DateBirthday.ToString()) && patient.DateBirthday.ToString() != "//")
             {
                 str += " DateBirthday:";
-                str += _removeSpecialCharacters(patient.DateBirthday.ToString());
+                str += _removeSpecialCharacters(patient.DateBirthday.ToString()).Replace(" 00:00:00", ""); ;
+
             }
 
             var i = 1;
