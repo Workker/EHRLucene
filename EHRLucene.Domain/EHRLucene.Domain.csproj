@@ -44,7 +44,7 @@
     <Reference Include="System.Web" />
     <Reference Include="Workker.Framework.Domain, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\LibEHR\Workker.Framework.Domain.dll</HintPath>
+      <HintPath>..\..\..\LibWorkker\Workker.Framework.Domain.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
