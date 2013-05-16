@@ -49,7 +49,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LuceneClient.cs" />
+    <Compile Include="LuceneClientCid.cs" />
+    <Compile Include="LuceneClientDef.cs" />
     <Compile Include="LuceneClientTreatment.cs" />
+    <Compile Include="LuceneClientTus.cs" />
     <Compile Include="RepositoryPatienDTOLucene.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

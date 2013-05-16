@@ -13,14 +13,13 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Version = Lucene.Net.Util.Version;
 
+
 namespace EHRLucene.Domain
 {
-
-
-    public class LuceneClientTreatment
+    public class LuceneClientDef
     {
 
-        public LuceneClientTreatment(string path)
+        public LuceneClientDef(string path)
         {
             InformarPath(path);
             CriarDiretorio();
@@ -29,7 +28,7 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_Treatment");
+            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_Def");
         }
 
         public void CriarDiretorio()
@@ -50,13 +49,13 @@ namespace EHRLucene.Domain
             }
         }
 
-        public void AddUpdateLuceneIndex(ITreatmentDTO patients)
+        public void AddUpdateLuceneIndex(DefDTO patients)
         {
-            AddUpdateLuceneIndex(new List<ITreatmentDTO> { patients });
+            AddUpdateLuceneIndex(new List<DefDTO> { patients });
             Optimize();
         }
 
-        public void AddUpdateLuceneIndex(IEnumerable<ITreatmentDTO> sampleDatas)
+        public void AddUpdateLuceneIndex(IEnumerable<DefDTO> sampleDatas)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
@@ -68,72 +67,68 @@ namespace EHRLucene.Domain
             }
         }
 
-        private void _addToLuceneIndex(ITreatmentDTO treatment, IndexWriter writer)
+        private void _addToLuceneIndex(DefDTO def, IndexWriter writer)
         {
             //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
             // RemoveIndex(treatment, writer);
             var doc = new Document();
-            AddFields(treatment, doc);
+            AddFields(def, doc);
             writer.AddDocument(doc);
         }
 
-        private void AddFields(ITreatmentDTO treatment, Document doc)
+        private void AddFields(DefDTO def, Document doc)
         {
-            doc.Add(new Field("Id", treatment.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("Hospital", treatment.Hospital.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("CheckOutDate", treatment.CheckOutDate.ToShortDateString(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("EntryDate", treatment.EntryDate.ToShortDateString(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Id", def.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Description", def.Description.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
-        private void RemoveIndex(ITreatmentDTO patient, IndexWriter writer)
+        private void RemoveIndex(DefDTO def, IndexWriter writer)
         {
-            var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString()));
+            var searchQuery = new TermQuery(new Term("Id", def.Id.ToString()));
             writer.DeleteDocuments(searchQuery);
         }
 
-        public IEnumerable<ITreatmentDTO> SimpleSearch(string input)
+        public IEnumerable<DefDTO> SimpleSearch(string input)
         {
-            return _inputIsNotNullOrEmpty(input) ? new List<ITreatmentDTO>() : _SimpleSearch(input);
+            return _inputIsNotNullOrEmpty(input) ? new List<DefDTO>() : _SimpleSearch(input);
 
         }
 
-        public IEnumerable<ITreatmentDTO> AdvancedSearch(List<RecordDTO> medicalRecords)
+        public IEnumerable<DefDTO> AdvancedSearch(List<DefDTO> defs)
         {
-            return _AdvancedSearch(medicalRecords);
+            return _AdvancedSearch(defs);
         }
 
-        private string TreatCharacters(List<RecordDTO> medicalRecords)
+        private string TreatCharacters(List<DefDTO> defs)
         {
             var str = "";
 
             var i = 1;
-            foreach (var h in medicalRecords.Select(m=> m.Code))
+            foreach (var h in defs.Select(m => m.Id))
             {
-                if (medicalRecords.Count > 1 && i < medicalRecords.Count)
+                if (defs.Count > 1 && i < defs.Count)
                 {
-                    str += " Id:" + h + " OR ";
+                    str += " Id:" + h.ToString() + " OR ";
                 }
                 else
                 {
-                    str += " Id:" + h;
+                    str += " Id:" + h.ToString();
                 }
                 i++;
             }
 
-            str += " Hospital: " + medicalRecords.FirstOrDefault().Hospital.ToString().ToLower();
-
             return str;
         }
 
-        private IEnumerable<ITreatmentDTO> _AdvancedSearch(List<RecordDTO> medicalRecords)
+        private IEnumerable<DefDTO> _AdvancedSearch(List<DefDTO> defs)
         {
-            var searchQueryStr = TreatCharacters(medicalRecords);
+            var searchQueryStr = TreatCharacters(defs);
 
             using (var searcher = new IndexSearcher(_directory, false))
             {
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
 
-                string[] array = CreatParameters(medicalRecords);
+                string[] array = CreatParameters(defs);
                 var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
                 parser.DefaultOperator = QueryParser.Operator.AND;
 
@@ -148,12 +143,11 @@ namespace EHRLucene.Domain
             }
         }
 
-        private string[] CreatParameters(List<RecordDTO> hospital)
+        private string[] CreatParameters(List<DefDTO> defs)
         {
             var parameters = new List<string>();
 
             parameters.Add("Id");
-            parameters.Add("Hospital");
             return parameters.ToArray();
         }
 
@@ -167,14 +161,14 @@ namespace EHRLucene.Domain
         }
 
 
-        private IEnumerable<ITreatmentDTO> _SimpleSearch(string searchQuery)
+        private IEnumerable<DefDTO> _SimpleSearch(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
 
             using (var searcher = new IndexSearcher(_directory, false))
             {
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
-                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Id" }, analyzer);
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Description" }, analyzer);
                 var query = parseQuery(searchQuery, parser);
                 var hits = searcher.Search(query, null, 10, Sort.RELEVANCE).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
@@ -211,25 +205,20 @@ namespace EHRLucene.Domain
             return query;
         }
 
-        private IEnumerable<ITreatmentDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
+        private IEnumerable<DefDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
             return hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
         }
 
-        private ITreatmentDTO _mapLuceneDocumentToData(Document doc)
+        private DefDTO _mapLuceneDocumentToData(Document doc)
         {
-            DbEnum valor;
-            var enumHospital = Enum.TryParse(doc.Get("Hospital"), true, out valor);
-
-            var treatment = new TreatmentDTO()
+            var def = new DefDTO()
             {
-                Id = doc.Get("Id"),
-                Hospital = enumHospital ? valor : DbEnum.sumario,
-                CheckOutDate = Convert.ToDateTime(doc.Get("CheckOutDate")),
-                EntryDate = Convert.ToDateTime(doc.Get("EntryDate")),
+                Id = short.Parse( doc.Get("Id")),
+                Description = doc.Get("Description"),
             };
 
-            return treatment;
+            return def;
         }
 
         private void Optimize()
