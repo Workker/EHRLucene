@@ -205,14 +205,21 @@ namespace EHRLucene.Domain
 
         private IEnumerable<TusDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
-            return hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
+            var tus = new List<TusDTO>();
+
+            foreach (var scoreDoc in hits)
+            {
+                tus.Add(_mapLuceneDocumentToData(searcher.Doc(scoreDoc.Doc)));
+            }
+
+            return tus;
         }
 
         private TusDTO _mapLuceneDocumentToData(Document doc)
         {
             var tus = new TusDTO()
             {
-                Id = short.Parse( doc.Get("Id")),
+                Id = short.Parse(doc.Get("Id")),
                 Description = doc.Get("Description"),
                 Code = doc.Get("Code"),
             };

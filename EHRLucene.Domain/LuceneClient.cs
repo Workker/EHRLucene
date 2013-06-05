@@ -173,14 +173,21 @@ namespace EHRLucene.Domain
                 Name = doc.Get("Name"),
                 CPF = doc.Get("CPF"),
                 Hospital = enumHospital ? valor : DbEnum.sumario,
-                DateBirthday = Convert.ToDateTime(doc.Get("DateBirthday")),
-
             };
 
-            if (!string.IsNullOrEmpty(doc.Get("DateBirthday").ToString()))
+            if (!string.IsNullOrEmpty(doc.Get("DateBirthday")))
             {
                 patient.DateBirthday = Convert.ToDateTime(doc.Get("DateBirthday"));
             }
+            if (!string.IsNullOrEmpty(doc.Get("CheckOutDate")))
+            {
+                patient.DateBirthday = Convert.ToDateTime(doc.Get("CheckOutDate"));
+            }
+            if (!string.IsNullOrEmpty(doc.Get("EntryDate")))
+            {
+                patient.EntryDate = Convert.ToDateTime(doc.Get("EntryDate"));
+            }
+
 
             return patient;
         }
@@ -198,7 +205,7 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index");
+            _luceneDir = Path.Combine("lucene_index");
         }
 
         private string TreatCharacters(IPatientDTO patient, List<string> hospital)
@@ -283,6 +290,12 @@ namespace EHRLucene.Domain
             doc.Add(new Field("Id", patient.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Name", patient.Name, Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Hospital", patient.Hospital.ToString(), Field.Store.YES, Field.Index.ANALYZED));
+
+            if (patient.CheckOutDate.HasValue)
+                doc.Add(new Field("CheckOutDate", patient.CheckOutDate.Value.ToShortDateString(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+
+            if (patient.EntryDate.HasValue)
+                doc.Add(new Field("EntryDate", patient.EntryDate.Value.ToShortDateString(), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
             if (!string.IsNullOrEmpty(patient.CPF))
                 doc.Add(new Field("CPF", patient.CPF, Field.Store.YES, Field.Index.ANALYZED));

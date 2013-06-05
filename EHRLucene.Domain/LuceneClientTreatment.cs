@@ -29,7 +29,7 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_Treatment");
+            _luceneDir = Path.Combine("lucene_index_Treatment");
         }
 
         public void CriarDiretorio()
@@ -99,7 +99,16 @@ namespace EHRLucene.Domain
 
         public IEnumerable<ITreatmentDTO> AdvancedSearch(List<RecordDTO> medicalRecords)
         {
-            return _AdvancedSearch(medicalRecords);
+            try
+            {
+                return _AdvancedSearch(medicalRecords);
+            }
+            catch (Exception ex)
+            {
+                    
+                throw ex;
+            }
+           
         }
 
         private string TreatCharacters(List<RecordDTO> medicalRecords)
@@ -138,7 +147,7 @@ namespace EHRLucene.Domain
                 parser.DefaultOperator = QueryParser.Operator.AND;
 
                 var query = parseQuery(searchQueryStr, parser);
-                var hits = searcher.Search(query, null, 5000000, Sort.RELEVANCE).ScoreDocs;
+                var hits = searcher.Search(query, null, 200, Sort.RELEVANCE).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
@@ -213,7 +222,16 @@ namespace EHRLucene.Domain
 
         private IEnumerable<ITreatmentDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
-            return hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
+            try
+            {
+                return hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
+            }
+            catch (Exception)
+            {
+                    
+                throw;
+            }
+            
         }
 
         private ITreatmentDTO _mapLuceneDocumentToData(Document doc)
