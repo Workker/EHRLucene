@@ -205,7 +205,14 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            _luceneDir = Path.Combine("lucene_index");
+            if (string.IsNullOrEmpty(path))
+            {
+                _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index");
+            }
+            else
+            {
+                _luceneDir = path;
+            }
         }
 
         private string TreatCharacters(IPatientDTO patient, List<string> hospital)
