@@ -84,6 +84,11 @@ namespace EHRLucene.Domain
             return patient == null ? new List<IPatientDTO>() : _AdvancedSearch(patient, hospital);
         }
 
+        public IEnumerable<IPatientDTO> AdvancedSearch(List<IPatientDTO> patients)
+        {
+            return patients == null ? new List<IPatientDTO>() : _AdvancedSearch(patients);
+        }
+
 
         //TODO: Remover se não for usado
         //private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
@@ -243,6 +248,27 @@ namespace EHRLucene.Domain
             return str;
         }
 
+        private string TreatCharacters(List<IPatientDTO> patients)
+        {
+            var i = 1;
+            string str = "";
+
+            foreach (var p in patients)
+            {
+                if (patients.Count > 1 && i < patients.Count)
+                {
+                    str += " (CPF:" + p.GetCPF() + ") OR ";
+                }
+                else
+                {
+                    str += " (CPF:" + p.GetCPF()+")";
+                }
+                i++;
+            }
+
+            return str;
+        }
+
         private IEnumerable<IPatientDTO> _AdvancedSearch(IPatientDTO searchQuery, List<string> hospital)
         {
             var searchQueryStr = TreatCharacters(searchQuery, hospital);
@@ -266,6 +292,35 @@ namespace EHRLucene.Domain
 
                 return results;
             }
+        }
+
+        private IEnumerable<IPatientDTO> _AdvancedSearch(List<IPatientDTO> patients)
+        {
+            var searchQueryStr = TreatCharacters(patients);
+
+            using (var searcher = new IndexSearcher(_directory, false))
+            {
+                var analyzer = new StandardAnalyzer(Version.LUCENE_30);
+
+                string[] array = CreatParameters(patients);
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
+                parser.DefaultOperator = QueryParser.Operator.AND;
+
+                var query = parseQuery(searchQueryStr, parser);
+                var hits = searcher.Search(query, null, 5000000, Sort.RELEVANCE).ScoreDocs;
+                var results = _mapLuceneToDataList(hits, searcher);
+
+                analyzer.Close();
+                searcher.Dispose();
+
+                return results;
+            }
+        }
+
+        private string[] CreatParameters(List<IPatientDTO> patients)
+        {
+            var parameters = new List<string> {"CPF"};
+            return parameters.ToArray();
         }
 
         private string[] CreatParameters(IPatientDTO searchQuery, List<string> hospital)
@@ -305,7 +360,7 @@ namespace EHRLucene.Domain
                 doc.Add(new Field("EntryDate", patient.EntryDate.Value.ToShortDateString(), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
             if (!string.IsNullOrEmpty(patient.CPF))
-                doc.Add(new Field("CPF", patient.CPF, Field.Store.YES, Field.Index.ANALYZED));
+                doc.Add(new Field("CPF", patient.GetCPF(), Field.Store.YES, Field.Index.ANALYZED));
 
             if (!string.IsNullOrEmpty(patient.DateBirthday.ToString()))
                 doc.Add(new Field("DateBirthday", patient.DateBirthday.ToString(), Field.Store.YES, Field.Index.ANALYZED));

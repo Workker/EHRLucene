@@ -71,7 +71,7 @@ namespace EHRLucene.Domain
         private void _addToLuceneIndex(ITreatmentDTO treatment, IndexWriter writer)
         {
             //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
-            // RemoveIndex(treatment, writer);
+            //     RemoveIndex(treatment, writer);
             var doc = new Document();
             AddFields(treatment, doc);
             writer.AddDocument(doc);
@@ -85,10 +85,17 @@ namespace EHRLucene.Domain
             doc.Add(new Field("EntryDate", treatment.EntryDate.ToShortDateString(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
-        private void RemoveIndex(ITreatmentDTO patient, IndexWriter writer)
+        private void RemoveIndex(ITreatmentDTO treatment, IndexWriter writer)
         {
-            var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString()));
-            writer.DeleteDocuments(searchQuery);
+            string str = "";
+
+            str += " (Hospital:" + treatment.Hospital;
+            if (treatment.CheckOutDate != DateTime.MinValue)
+                str += " AND CheckOutDate:" + treatment.CheckOutDate.ToShortDateString();
+            str += " AND Id:" + treatment.Id;
+            str += " AND EntryDate:" + treatment.EntryDate.ToShortDateString() + " )";
+
+            writer.DeleteDocuments(CreateQuery(str));
         }
 
         public IEnumerable<ITreatmentDTO> SimpleSearch(string input)
@@ -105,10 +112,24 @@ namespace EHRLucene.Domain
             }
             catch (Exception ex)
             {
-                    
+
                 throw ex;
             }
-           
+
+        }
+
+        public IEnumerable<ITreatmentDTO> AdvancedPeriodicSearch(List<ITreatmentDTO> treatments)
+        {
+            try
+            {
+                return _AdvancedSearch(treatments);
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
+
         }
 
         private string TreatCharacters(List<RecordDTO> medicalRecords)
@@ -116,11 +137,11 @@ namespace EHRLucene.Domain
             var str = "";
 
             var i = 1;
-            foreach (var h in medicalRecords.Select(m=> m.Code))
+            foreach (var h in medicalRecords.Select(m => m.Code))
             {
                 if (medicalRecords.Count > 1 && i < medicalRecords.Count)
                 {
-                    str += " Id:" + h + " OR ";
+                    str += " (Id:" + h + " ) OR ";
                 }
                 else
                 {
@@ -130,6 +151,37 @@ namespace EHRLucene.Domain
             }
 
             str += " Hospital: " + medicalRecords.FirstOrDefault().Hospital.ToString().ToLower();
+
+            return str;
+        }
+
+        private string TreatCharacters(List<ITreatmentDTO> treatmentDtos)
+        {
+            var str = "";
+
+            var i = 1;
+            foreach (var h in treatmentDtos)
+            {
+
+                if (treatmentDtos.Count > 1 && i < treatmentDtos.Count)
+                {
+                    str += " (Hospital:" + h.Hospital;
+                    str += " AND CheckOutDate:" + h.CheckOutDate.ToShortDateString();
+
+                    str += " AND Id:" + h.Id;
+                    str += " AND EntryDate:" + h.EntryDate.ToShortDateString() +
+                      ") OR ";
+                }
+                else
+                {
+                    str += " (Hospital:" + h.Hospital;
+                    //if (h.CheckOutDate != DateTime.MinValue)
+                    str += " AND CheckOutDate:" + h.CheckOutDate.ToShortDateString();
+                    str += " AND Id:" + h.Id;
+                    str += " AND EntryDate:" + h.EntryDate.ToShortDateString() + " )";
+                }
+                i++;
+            }
 
             return str;
         }
@@ -147,7 +199,7 @@ namespace EHRLucene.Domain
                 parser.DefaultOperator = QueryParser.Operator.AND;
 
                 var query = parseQuery(searchQueryStr, parser);
-                var hits = searcher.Search(query, null, 200, Sort.RELEVANCE).ScoreDocs;
+                var hits = searcher.Search(query, null, 300, Sort.RELEVANCE).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
@@ -155,6 +207,53 @@ namespace EHRLucene.Domain
 
                 return results;
             }
+        }
+
+        private Query CreateQuery(string queryStr)
+        {
+            using (var searcher = new IndexSearcher(_directory, false))
+            {
+                var analyzer = new StandardAnalyzer(Version.LUCENE_30);
+
+                string[] array = CreatParameters();
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
+                parser.DefaultOperator = QueryParser.Operator.AND;
+
+                return parseQuery(queryStr, parser);
+            }
+        }
+
+        private IEnumerable<ITreatmentDTO> _AdvancedSearch(List<ITreatmentDTO> treatmentDtos)
+        {
+            var searchQueryStr = TreatCharacters(treatmentDtos);
+
+            using (var searcher = new IndexSearcher(_directory, false))
+            {
+                var analyzer = new StandardAnalyzer(Version.LUCENE_30);
+
+                string[] array = CreatParameters();
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
+                parser.DefaultOperator = QueryParser.Operator.AND;
+
+                var query = parseQuery(searchQueryStr, parser);
+                var hits = searcher.Search(query, null, 300, Sort.RELEVANCE).ScoreDocs;
+                var results = _mapLuceneToDataList(hits, searcher);
+
+                analyzer.Close();
+                searcher.Dispose();
+
+                return results;
+            }
+        }
+
+        private string[] CreatParameters()
+        {
+            var parameters = new List<string>();
+            parameters.Add("Id");
+            parameters.Add("Hospital");
+            parameters.Add("CheckOutDate");
+            parameters.Add("EntryDate");
+            return parameters.ToArray();
         }
 
         private string[] CreatParameters(List<RecordDTO> hospital)
@@ -228,10 +327,10 @@ namespace EHRLucene.Domain
             }
             catch (Exception)
             {
-                    
+
                 throw;
             }
-            
+
         }
 
         private ITreatmentDTO _mapLuceneDocumentToData(Document doc)
