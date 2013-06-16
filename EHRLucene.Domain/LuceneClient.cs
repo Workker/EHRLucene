@@ -164,7 +164,14 @@ namespace EHRLucene.Domain
 
         private IEnumerable<IPatientDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
-            return hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
+
+            IList<IPatientDTO> patients = new List<IPatientDTO>();
+            foreach (var hit in hits)
+            {
+                patients.Add(_mapLuceneDocumentToData(searcher.Doc(hit.Doc)));
+            }
+            //hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
+            return patients;
         }
 
         private IPatientDTO _mapLuceneDocumentToData(Document doc)

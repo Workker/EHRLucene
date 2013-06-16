@@ -323,7 +323,13 @@ namespace EHRLucene.Domain
         {
             try
             {
-                return hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
+                IList<ITreatmentDTO> treatmentDtos = new List<ITreatmentDTO>();
+                foreach (var hit in hits)
+                {
+                    treatmentDtos.Add(_mapLuceneDocumentToData(searcher.Doc(hit.Doc)));
+                }
+                //hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
+                return treatmentDtos;
             }
             catch (Exception)
             {
