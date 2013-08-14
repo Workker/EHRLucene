@@ -1,16 +1,14 @@
-﻿using System.Collections.ObjectModel;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Web;
-using EHR.CoreShared;
+﻿using EHR.CoreShared;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
 using Version = Lucene.Net.Util.Version;
 
 namespace EHRLucene.Domain
@@ -47,13 +45,13 @@ namespace EHRLucene.Domain
             }
         }
 
-        public void AddUpdateLuceneIndex(CidDTO cids)
+        public void AddUpdateLuceneIndex(CID cids)
         {
-            AddUpdateLuceneIndex(new List<CidDTO> { cids });
+            AddUpdateLuceneIndex(new List<CID> { cids });
             Optimize();
         }
 
-        public void AddUpdateLuceneIndex(IEnumerable<CidDTO> sampleDatas)
+        public void AddUpdateLuceneIndex(IEnumerable<CID> sampleDatas)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
@@ -65,7 +63,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private void _addToLuceneIndex(CidDTO cid, IndexWriter writer)
+        private void _addToLuceneIndex(CID cid, IndexWriter writer)
         {
             //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
             // RemoveIndex(treatment, writer);
@@ -74,31 +72,31 @@ namespace EHRLucene.Domain
             writer.AddDocument(doc);
         }
 
-        private void AddFields(CidDTO cid, Document doc)
+        private void AddFields(CID cid, Document doc)
         {
             doc.Add(new Field("Id", cid.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Description", cid.Description.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Code", cid.Code.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
-        private void RemoveIndex(CidDTO cid, IndexWriter writer)
+        private void RemoveIndex(CID cid, IndexWriter writer)
         {
             var searchQuery = new TermQuery(new Term("Id", cid.Id.ToString()));
             writer.DeleteDocuments(searchQuery);
         }
 
-        public IEnumerable<CidDTO> SimpleSearch(string input)
+        public IEnumerable<CID> SimpleSearch(string input)
         {
-            return _inputIsNotNullOrEmpty(input) ? new List<CidDTO>() : _SimpleSearch(input);
+            return _inputIsNotNullOrEmpty(input) ? new List<CID>() : _SimpleSearch(input);
 
         }
 
-        public IEnumerable<CidDTO> AdvancedSearch(List<CidDTO> cids)
+        public IEnumerable<CID> AdvancedSearch(List<CID> cids)
         {
             return _AdvancedSearch(cids);
         }
 
-        private string TreatCharacters(List<CidDTO> cids)
+        private string TreatCharacters(List<CID> cids)
         {
             var str = "";
 
@@ -119,7 +117,7 @@ namespace EHRLucene.Domain
             return str;
         }
 
-        private IEnumerable<CidDTO> _AdvancedSearch(List<CidDTO> cids)
+        private IEnumerable<CID> _AdvancedSearch(List<CID> cids)
         {
             var searchQueryStr = TreatCharacters(cids);
 
@@ -142,7 +140,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private string[] CreatParameters(List<CidDTO> cids)
+        private string[] CreatParameters(List<CID> cids)
         {
             var parameters = new List<string>();
 
@@ -160,7 +158,7 @@ namespace EHRLucene.Domain
         }
 
 
-        private IEnumerable<CidDTO> _SimpleSearch(string searchQuery)
+        private IEnumerable<CID> _SimpleSearch(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
 
@@ -204,14 +202,14 @@ namespace EHRLucene.Domain
             return query;
         }
 
-        private IEnumerable<CidDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
+        private IEnumerable<CID> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
             return hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
         }
 
-        private CidDTO _mapLuceneDocumentToData(Document doc)
+        private CID _mapLuceneDocumentToData(Document doc)
         {
-            var cid = new CidDTO()
+            var cid = new CID()
             {
                 Id = short.Parse(doc.Get("Id")),
                 Description = doc.Get("Description"),

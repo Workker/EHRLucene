@@ -1,5 +1,5 @@
-﻿
-using EHR.CoreShared;
+﻿using EHR.CoreShared;
+using EHR.CoreShared.Interfaces;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -51,13 +51,13 @@ namespace EHRLucene.Domain
             if (!System.IO.Directory.Exists(_luceneDir)) System.IO.Directory.CreateDirectory(_luceneDir);
         }
 
-        public void AddUpdateLuceneIndex(PatientDTO patients)
+        public void AddUpdateLuceneIndex(Patient patients)
         {
-            AddUpdateLuceneIndex(new List<PatientDTO> { patients });
+            AddUpdateLuceneIndex(new List<Patient> { patients });
             Optimize();
         }
 
-        public void AddUpdateLuceneIndex(IEnumerable<IPatientDTO> sampleDatas)
+        public void AddUpdateLuceneIndex(IEnumerable<IPatient> sampleDatas)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
@@ -68,25 +68,25 @@ namespace EHRLucene.Domain
             }
         }
 
-        public IPatientDTO SearchBy(string cpf)
+        public IPatient SearchBy(string cpf)
         {
-            return _inputIsNotNullOrEmpty(cpf) ? new PatientDTO() : _SearchBy(cpf);
+            return _inputIsNotNullOrEmpty(cpf) ? new Patient() : _SearchBy(cpf);
         }
 
-        public IEnumerable<IPatientDTO> SimpleSearch(string input)
+        public IEnumerable<IPatient> SimpleSearch(string input)
         {
-            return _inputIsNotNullOrEmpty(input) ? new List<IPatientDTO>() : _SimpleSearch(input);
+            return _inputIsNotNullOrEmpty(input) ? new List<IPatient>() : _SimpleSearch(input);
 
         }
 
-        public IEnumerable<IPatientDTO> AdvancedSearch(IPatientDTO patient, List<string> hospital)
+        public IEnumerable<IPatient> AdvancedSearch(IPatient patient, List<string> hospital)
         {
-            return patient == null ? new List<IPatientDTO>() : _AdvancedSearch(patient, hospital);
+            return patient == null ? new List<IPatient>() : _AdvancedSearch(patient, hospital);
         }
 
-        public IEnumerable<IPatientDTO> AdvancedSearch(List<IPatientDTO> patients)
+        public IEnumerable<IPatient> AdvancedSearch(List<IPatient> patients)
         {
-            return patients == null ? new List<IPatientDTO>() : _AdvancedSearch(patients);
+            return patients == null ? new List<IPatient>() : _AdvancedSearch(patients);
         }
 
 
@@ -99,7 +99,7 @@ namespace EHRLucene.Domain
         //}
 
 
-        private IPatientDTO _SearchBy(string searchQuery)
+        private IPatient _SearchBy(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
 
@@ -118,7 +118,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private IEnumerable<IPatientDTO> _SimpleSearch(string searchQuery)
+        private IEnumerable<IPatient> _SimpleSearch(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
 
@@ -162,10 +162,10 @@ namespace EHRLucene.Domain
             return query;
         }
 
-        private IEnumerable<IPatientDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
+        private IEnumerable<IPatient> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
 
-            IList<IPatientDTO> patients = new List<IPatientDTO>();
+            IList<IPatient> patients = new List<IPatient>();
             foreach (var hit in hits)
             {
                 patients.Add(_mapLuceneDocumentToData(searcher.Doc(hit.Doc)));
@@ -174,12 +174,12 @@ namespace EHRLucene.Domain
             return patients;
         }
 
-        private IPatientDTO _mapLuceneDocumentToData(Document doc)
+        private IPatient _mapLuceneDocumentToData(Document doc)
         {
             DbEnum valor;
             var enumHospital = Enum.TryParse(doc.Get("Hospital"), true, out valor);
 
-            var patient = new PatientDTO()
+            var patient = new Patient()
             {
                 Id = doc.Get("Id"),
                 Name = doc.Get("Name"),
@@ -227,7 +227,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private string TreatCharacters(IPatientDTO patient, List<string> hospital)
+        private string TreatCharacters(IPatient patient, List<string> hospital)
         {
             var str = "Name:";
             str += _removeSpecialCharacters(patient.Name);
@@ -255,7 +255,7 @@ namespace EHRLucene.Domain
             return str;
         }
 
-        private string TreatCharacters(List<IPatientDTO> patients)
+        private string TreatCharacters(List<IPatient> patients)
         {
             var i = 1;
             string str = "";
@@ -268,7 +268,7 @@ namespace EHRLucene.Domain
                 }
                 else
                 {
-                    str += " (CPF:" + p.GetCPF()+")";
+                    str += " (CPF:" + p.GetCPF() + ")";
                 }
                 i++;
             }
@@ -276,7 +276,7 @@ namespace EHRLucene.Domain
             return str;
         }
 
-        private IEnumerable<IPatientDTO> _AdvancedSearch(IPatientDTO searchQuery, List<string> hospital)
+        private IEnumerable<IPatient> _AdvancedSearch(IPatient searchQuery, List<string> hospital)
         {
             var searchQueryStr = TreatCharacters(searchQuery, hospital);
 
@@ -301,7 +301,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private IEnumerable<IPatientDTO> _AdvancedSearch(List<IPatientDTO> patients)
+        private IEnumerable<IPatient> _AdvancedSearch(List<IPatient> patients)
         {
             var searchQueryStr = TreatCharacters(patients);
 
@@ -324,13 +324,13 @@ namespace EHRLucene.Domain
             }
         }
 
-        private string[] CreatParameters(List<IPatientDTO> patients)
+        private string[] CreatParameters(List<IPatient> patients)
         {
-            var parameters = new List<string> {"CPF"};
+            var parameters = new List<string> { "CPF" };
             return parameters.ToArray();
         }
 
-        private string[] CreatParameters(IPatientDTO searchQuery, List<string> hospital)
+        private string[] CreatParameters(IPatient searchQuery, List<string> hospital)
         {
             var parameters = new List<string>();
 
@@ -346,7 +346,7 @@ namespace EHRLucene.Domain
             return parameters.ToArray();
         }
 
-        private void _addToLuceneIndex(IPatientDTO patient, IndexWriter writer)
+        private void _addToLuceneIndex(IPatient patient, IndexWriter writer)
         {
             RemoveIndex(patient, writer);
             var doc = new Document();
@@ -354,7 +354,7 @@ namespace EHRLucene.Domain
             writer.AddDocument(doc);
         }
 
-        private void AddFields(IPatientDTO patient, Document doc)
+        private void AddFields(IPatient patient, Document doc)
         {
             doc.Add(new Field("Id", patient.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Name", patient.Name, Field.Store.YES, Field.Index.ANALYZED));
@@ -373,7 +373,7 @@ namespace EHRLucene.Domain
                 doc.Add(new Field("DateBirthday", patient.DateBirthday.ToString(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
-        private void RemoveIndex(IPatientDTO patient, IndexWriter writer)
+        private void RemoveIndex(IPatient patient, IndexWriter writer)
         {
             var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString()));
             writer.DeleteDocuments(searchQuery);

@@ -1,16 +1,14 @@
-﻿using System.Collections.ObjectModel;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Web;
-using EHR.CoreShared;
+﻿using EHR.CoreShared;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
 using Version = Lucene.Net.Util.Version;
 namespace EHRLucene.Domain
 {
@@ -46,13 +44,13 @@ namespace EHRLucene.Domain
             }
         }
 
-        public void AddUpdateLuceneIndex(TusDTO patients)
+        public void AddUpdateLuceneIndex(TUS patients)
         {
-            AddUpdateLuceneIndex(new List<TusDTO> { patients });
+            AddUpdateLuceneIndex(new List<TUS> { patients });
             Optimize();
         }
 
-        public void AddUpdateLuceneIndex(IEnumerable<TusDTO> sampleDatas)
+        public void AddUpdateLuceneIndex(IEnumerable<TUS> sampleDatas)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
@@ -64,7 +62,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private void _addToLuceneIndex(TusDTO treatment, IndexWriter writer)
+        private void _addToLuceneIndex(TUS treatment, IndexWriter writer)
         {
             //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
             // RemoveIndex(treatment, writer);
@@ -73,31 +71,31 @@ namespace EHRLucene.Domain
             writer.AddDocument(doc);
         }
 
-        private void AddFields(TusDTO tus, Document doc)
+        private void AddFields(TUS tus, Document doc)
         {
             doc.Add(new Field("Id", tus.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Description", tus.Description.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Code", tus.Code.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
-        private void RemoveIndex(TusDTO tus, IndexWriter writer)
+        private void RemoveIndex(TUS tus, IndexWriter writer)
         {
             var searchQuery = new TermQuery(new Term("Id", tus.Id.ToString()));
             writer.DeleteDocuments(searchQuery);
         }
 
-        public IEnumerable<TusDTO> SimpleSearch(string input)
+        public IEnumerable<TUS> SimpleSearch(string input)
         {
-            return _inputIsNotNullOrEmpty(input) ? new List<TusDTO>() : _SimpleSearch(input);
+            return _inputIsNotNullOrEmpty(input) ? new List<TUS>() : _SimpleSearch(input);
 
         }
 
-        public IEnumerable<TusDTO> AdvancedSearch(List<TusDTO> tus)
+        public IEnumerable<TUS> AdvancedSearch(List<TUS> tus)
         {
             return _AdvancedSearch(tus);
         }
 
-        private string TreatCharacters(List<TusDTO> tus)
+        private string TreatCharacters(List<TUS> tus)
         {
             var str = "";
 
@@ -118,7 +116,7 @@ namespace EHRLucene.Domain
             return str;
         }
 
-        private IEnumerable<TusDTO> _AdvancedSearch(List<TusDTO> tus)
+        private IEnumerable<TUS> _AdvancedSearch(List<TUS> tus)
         {
             var searchQueryStr = TreatCharacters(tus);
 
@@ -141,7 +139,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private string[] CreatParameters(List<TusDTO> tus)
+        private string[] CreatParameters(List<TUS> tus)
         {
             var parameters = new List<string>();
 
@@ -159,7 +157,7 @@ namespace EHRLucene.Domain
         }
 
 
-        private IEnumerable<TusDTO> _SimpleSearch(string searchQuery)
+        private IEnumerable<TUS> _SimpleSearch(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
 
@@ -203,9 +201,9 @@ namespace EHRLucene.Domain
             return query;
         }
 
-        private IEnumerable<TusDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
+        private IEnumerable<TUS> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
-            var tus = new List<TusDTO>();
+            var tus = new List<TUS>();
 
             foreach (var scoreDoc in hits)
             {
@@ -215,9 +213,9 @@ namespace EHRLucene.Domain
             return tus;
         }
 
-        private TusDTO _mapLuceneDocumentToData(Document doc)
+        private TUS _mapLuceneDocumentToData(Document doc)
         {
-            var tus = new TusDTO()
+            var tus = new TUS()
             {
                 Id = short.Parse(doc.Get("Id")),
                 Description = doc.Get("Description"),

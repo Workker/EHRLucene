@@ -1,16 +1,14 @@
-﻿using System.Collections.ObjectModel;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Web;
-using EHR.CoreShared;
+﻿using EHR.CoreShared;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
 using Version = Lucene.Net.Util.Version;
 
 
@@ -49,13 +47,13 @@ namespace EHRLucene.Domain
             }
         }
 
-        public void AddUpdateLuceneIndex(DefDTO patients)
+        public void AddUpdateLuceneIndex(DEF patients)
         {
-            AddUpdateLuceneIndex(new List<DefDTO> { patients });
+            AddUpdateLuceneIndex(new List<DEF> { patients });
             Optimize();
         }
 
-        public void AddUpdateLuceneIndex(IEnumerable<DefDTO> sampleDatas)
+        public void AddUpdateLuceneIndex(IEnumerable<DEF> sampleDatas)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
@@ -67,7 +65,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private void _addToLuceneIndex(DefDTO def, IndexWriter writer)
+        private void _addToLuceneIndex(DEF def, IndexWriter writer)
         {
             //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
             // RemoveIndex(treatment, writer);
@@ -76,30 +74,30 @@ namespace EHRLucene.Domain
             writer.AddDocument(doc);
         }
 
-        private void AddFields(DefDTO def, Document doc)
+        private void AddFields(DEF def, Document doc)
         {
             doc.Add(new Field("Id", def.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Description", def.Description.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
-        private void RemoveIndex(DefDTO def, IndexWriter writer)
+        private void RemoveIndex(DEF def, IndexWriter writer)
         {
             var searchQuery = new TermQuery(new Term("Id", def.Id.ToString()));
             writer.DeleteDocuments(searchQuery);
         }
 
-        public IEnumerable<DefDTO> SimpleSearch(string input)
+        public IEnumerable<DEF> SimpleSearch(string input)
         {
-            return _inputIsNotNullOrEmpty(input) ? new List<DefDTO>() : _SimpleSearch(input);
+            return _inputIsNotNullOrEmpty(input) ? new List<DEF>() : _SimpleSearch(input);
 
         }
 
-        public IEnumerable<DefDTO> AdvancedSearch(List<DefDTO> defs)
+        public IEnumerable<DEF> AdvancedSearch(List<DEF> defs)
         {
             return _AdvancedSearch(defs);
         }
 
-        private string TreatCharacters(List<DefDTO> defs)
+        private string TreatCharacters(List<DEF> defs)
         {
             var str = "";
 
@@ -120,7 +118,7 @@ namespace EHRLucene.Domain
             return str;
         }
 
-        private IEnumerable<DefDTO> _AdvancedSearch(List<DefDTO> defs)
+        private IEnumerable<DEF> _AdvancedSearch(List<DEF> defs)
         {
             var searchQueryStr = TreatCharacters(defs);
 
@@ -143,7 +141,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private string[] CreatParameters(List<DefDTO> defs)
+        private string[] CreatParameters(List<DEF> defs)
         {
             var parameters = new List<string>();
 
@@ -161,7 +159,7 @@ namespace EHRLucene.Domain
         }
 
 
-        private IEnumerable<DefDTO> _SimpleSearch(string searchQuery)
+        private IEnumerable<DEF> _SimpleSearch(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
 
@@ -205,16 +203,16 @@ namespace EHRLucene.Domain
             return query;
         }
 
-        private IEnumerable<DefDTO> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
+        private IEnumerable<DEF> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
             return hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
         }
 
-        private DefDTO _mapLuceneDocumentToData(Document doc)
+        private DEF _mapLuceneDocumentToData(Document doc)
         {
-            var def = new DefDTO()
+            var def = new DEF()
             {
-                Id = short.Parse( doc.Get("Id")),
+                Id = short.Parse(doc.Get("Id")),
                 Description = doc.Get("Description"),
             };
 
