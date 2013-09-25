@@ -41,13 +41,13 @@ namespace EHRLucene.Domain
 
         #region Public Methods
 
-        public void AddUpdateLuceneIndex(CID cids)
+        public void UpdateIndex(CID cids)
         {
-            AddUpdateLuceneIndex(new List<CID> { cids });
+            UpdateIndex(new List<CID> { cids });
             Optimize();
         }
 
-        public void AddUpdateLuceneIndex(IEnumerable<CID> sampleDatas)
+        public void UpdateIndex(IEnumerable<CID> sampleDatas)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))

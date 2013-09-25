@@ -47,13 +47,13 @@ namespace EHRLucene.Domain
             return _AdvancedSearch(defs);
         }
 
-        public void AddUpdateLuceneIndex(DEF patients)
+        public void UpdateIndex(DEF patients)
         {
-            AddUpdateLuceneIndex(new List<DEF> { patients });
+            UpdateIndex(new List<DEF> { patients });
             Optimize();
         }
 
-        public void AddUpdateLuceneIndex(IEnumerable<DEF> sampleDatas)
+        public void UpdateIndex(IEnumerable<DEF> sampleDatas)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))

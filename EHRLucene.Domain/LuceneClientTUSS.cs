@@ -40,7 +40,7 @@ namespace EHRLucene.Domain
 
         #region Public Methods
 
-        public void AddUpdateLuceneIndex(TUSS tuss)
+        public void UpdateIndex(TUSS tuss)
         {
             UpdateIndex(new List<TUSS> { tuss });
             Optimize();
