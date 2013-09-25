@@ -6,6 +6,7 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Web;
@@ -13,37 +14,32 @@ using Version = Lucene.Net.Util.Version;
 
 namespace EHRLucene.Domain
 {
-    public class LuceneClientCid
+    public class LuceneClientCID
     {
-        public LuceneClientCid(string path)
-        {
-            InformarPath(path);
-            CriarDiretorio();
-
-        }
-
-        private void InformarPath(string path)
-        {
-            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_Cid");
-        }
-
-        public void CriarDiretorio()
-        {
-            if (!System.IO.Directory.Exists(_luceneDir)) System.IO.Directory.CreateDirectory(_luceneDir);
-        }
-
-        public string _luceneDir;
+        public string IndexDirectory;
         private FSDirectory _directoryTemp;
         private FSDirectory _directory
         {
             get
             {
-                if (_directoryTemp == null) _directoryTemp = FSDirectory.Open(new DirectoryInfo(_luceneDir));
+                if (_directoryTemp == null) _directoryTemp = FSDirectory.Open(new DirectoryInfo(IndexDirectory));
                 if (IndexWriter.IsLocked(_directoryTemp)) IndexWriter.Unlock(_directoryTemp);
-                var lockFilePath = Path.Combine(_luceneDir, "write.lock");
+                var lockFilePath = Path.Combine(IndexDirectory, "write.lock");
                 return _directoryTemp;
             }
         }
+
+        #region Constructors
+
+        public LuceneClientCID(string path)
+        {
+            EntryPath(path);
+            CreateDirectory();
+        }
+
+        #endregion
+
+        #region Public Methods
 
         public void AddUpdateLuceneIndex(CID cids)
         {
@@ -63,6 +59,31 @@ namespace EHRLucene.Domain
             }
         }
 
+        public IEnumerable<CID> AdvancedSearch(List<CID> cids)
+        {
+            return _AdvancedSearch(cids);
+        }
+
+        public IEnumerable<CID> SimpleSearch(string input)
+        {
+            return _inputIsNotNullOrEmpty(input) ? new List<CID>() : _SimpleSearch(input);
+
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void EntryPath(string path)
+        {
+            IndexDirectory = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath ?? path, "lucene_index_Cid");
+        }
+
+        private void CreateDirectory()
+        {
+            if (!System.IO.Directory.Exists(IndexDirectory)) System.IO.Directory.CreateDirectory(IndexDirectory);
+        }
+
         private void _addToLuceneIndex(CID cid, IndexWriter writer)
         {
             //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
@@ -74,26 +95,15 @@ namespace EHRLucene.Domain
 
         private void AddFields(CID cid, Document doc)
         {
-            doc.Add(new Field("Id", cid.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("Description", cid.Description.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("Code", cid.Code.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Id", cid.Id.ToString(CultureInfo.InvariantCulture), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Description", cid.Description.ToLower(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Code", cid.Code.ToLower(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
         private void RemoveIndex(CID cid, IndexWriter writer)
         {
-            var searchQuery = new TermQuery(new Term("Id", cid.Id.ToString()));
+            var searchQuery = new TermQuery(new Term("Id", cid.Id.ToString(CultureInfo.InvariantCulture)));
             writer.DeleteDocuments(searchQuery);
-        }
-
-        public IEnumerable<CID> SimpleSearch(string input)
-        {
-            return _inputIsNotNullOrEmpty(input) ? new List<CID>() : _SimpleSearch(input);
-
-        }
-
-        public IEnumerable<CID> AdvancedSearch(List<CID> cids)
-        {
-            return _AdvancedSearch(cids);
         }
 
         private string TreatCharacters(List<CID> cids)
@@ -105,11 +115,11 @@ namespace EHRLucene.Domain
             {
                 if (cids.Count > 1 && i < cids.Count)
                 {
-                    str += " Id:" + h.ToString() + " OR ";
+                    str += " Id:" + h.ToString(CultureInfo.InvariantCulture) + " OR ";
                 }
                 else
                 {
-                    str += " Id:" + h.ToString();
+                    str += " Id:" + h.ToString(CultureInfo.InvariantCulture);
                 }
                 i++;
             }
@@ -148,15 +158,12 @@ namespace EHRLucene.Domain
             return parameters.ToArray();
         }
 
-
-
         private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
         {
             var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Id" }, analyzer);
             parser.DefaultOperator = QueryParser.Operator.AND;
             return parser;
         }
-
 
         private IEnumerable<CID> _SimpleSearch(string searchQuery)
         {
@@ -174,7 +181,6 @@ namespace EHRLucene.Domain
                 searcher.Dispose();
 
                 return results;
-
             }
         }
 
@@ -209,12 +215,12 @@ namespace EHRLucene.Domain
 
         private CID _mapLuceneDocumentToData(Document doc)
         {
-            var cid = new CID()
-            {
-                Id = short.Parse(doc.Get("Id")),
-                Description = doc.Get("Description"),
-                Code = doc.Get("Code"),
-            };
+            var cid = new CID
+                          {
+                              Id = short.Parse(doc.Get("Id")),
+                              Description = doc.Get("Description"),
+                              Code = doc.Get("Code"),
+                          };
 
             return cid;
         }
@@ -229,5 +235,7 @@ namespace EHRLucene.Domain
                 writer.Dispose();
             }
         }
+
+        #endregion
     }
 }

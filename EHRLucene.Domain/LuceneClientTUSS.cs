@@ -6,96 +6,79 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Web;
 using Version = Lucene.Net.Util.Version;
 namespace EHRLucene.Domain
 {
-    public class LuceneClientTus
+    public class LuceneClientTUSS
     {
-        public LuceneClientTus(string path)
-        {
-            InformarPath(path);
-            CriarDiretorio();
-
-        }
-
-        private void InformarPath(string path)
-        {
-            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_Tus");
-        }
-
-        public void CriarDiretorio()
-        {
-            if (!System.IO.Directory.Exists(_luceneDir)) System.IO.Directory.CreateDirectory(_luceneDir);
-        }
-
-        public string _luceneDir;
+        public string IndexDirectory;
         private FSDirectory _directoryTemp;
         private FSDirectory _directory
         {
             get
             {
-                if (_directoryTemp == null) _directoryTemp = FSDirectory.Open(new DirectoryInfo(_luceneDir));
+                if (_directoryTemp == null) _directoryTemp = FSDirectory.Open(new DirectoryInfo(IndexDirectory));
                 if (IndexWriter.IsLocked(_directoryTemp)) IndexWriter.Unlock(_directoryTemp);
-                var lockFilePath = Path.Combine(_luceneDir, "write.lock");
+                var lockFilePath = Path.Combine(IndexDirectory, "write.lock");
                 return _directoryTemp;
             }
         }
 
-        public void AddUpdateLuceneIndex(TUS patients)
+        #region Constructors
+
+        public LuceneClientTUSS(string path)
         {
-            AddUpdateLuceneIndex(new List<TUS> { patients });
+            EntryPath(path);
+            CreateDirectory();
+        }
+
+        #endregion
+
+        #region Public Methods
+
+        public void AddUpdateLuceneIndex(TUSS tuss)
+        {
+            UpdateIndex(new List<TUSS> { tuss });
             Optimize();
         }
 
-        public void AddUpdateLuceneIndex(IEnumerable<TUS> sampleDatas)
+        public void UpdateIndex(IEnumerable<TUSS> sampleDatas)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
+
             using (var writer = new IndexWriter(_directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
             {
-                foreach (var sampleData in sampleDatas) _addToLuceneIndex(sampleData, writer);
-
+                foreach (var sampleData in sampleDatas) AddToIndex(sampleData, writer);
                 analyzer.Close();
                 writer.Dispose();
             }
         }
 
-        private void _addToLuceneIndex(TUS treatment, IndexWriter writer)
+        public IEnumerable<TUSS> SimpleSearch(string input)
         {
-            //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
-            // RemoveIndex(treatment, writer);
-            var doc = new Document();
-            AddFields(treatment, doc);
-            writer.AddDocument(doc);
-        }
-
-        private void AddFields(TUS tus, Document doc)
-        {
-            doc.Add(new Field("Id", tus.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("Description", tus.Description.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("Code", tus.Code.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
-        }
-
-        private void RemoveIndex(TUS tus, IndexWriter writer)
-        {
-            var searchQuery = new TermQuery(new Term("Id", tus.Id.ToString()));
-            writer.DeleteDocuments(searchQuery);
-        }
-
-        public IEnumerable<TUS> SimpleSearch(string input)
-        {
-            return _inputIsNotNullOrEmpty(input) ? new List<TUS>() : _SimpleSearch(input);
+            return _inputIsNotNullOrEmpty(input) ? new List<TUSS>() : _SimpleSearch(input);
 
         }
 
-        public IEnumerable<TUS> AdvancedSearch(List<TUS> tus)
+        public IEnumerable<TUSS> AdvancedSearch(List<TUSS> tus)
         {
             return _AdvancedSearch(tus);
         }
 
-        private string TreatCharacters(List<TUS> tus)
+        #endregion
+
+        #region Private Methods
+
+        private void CreateDirectory()
+        {
+            if (!System.IO.Directory.Exists(IndexDirectory)) System.IO.Directory.CreateDirectory(IndexDirectory);
+        }
+
+        private string TreatCharacters(List<TUSS> tus)
         {
             var str = "";
 
@@ -104,11 +87,11 @@ namespace EHRLucene.Domain
             {
                 if (tus.Count > 1 && i < tus.Count)
                 {
-                    str += " Id:" + h.ToString() + " OR ";
+                    str += " Id:" + h.ToString(CultureInfo.InvariantCulture) + " OR ";
                 }
                 else
                 {
-                    str += " Id:" + h.ToString();
+                    str += " Id:" + h.ToString(CultureInfo.InvariantCulture);
                 }
                 i++;
             }
@@ -116,7 +99,7 @@ namespace EHRLucene.Domain
             return str;
         }
 
-        private IEnumerable<TUS> _AdvancedSearch(List<TUS> tus)
+        private IEnumerable<TUSS> _AdvancedSearch(List<TUSS> tus)
         {
             var searchQueryStr = TreatCharacters(tus);
 
@@ -139,15 +122,13 @@ namespace EHRLucene.Domain
             }
         }
 
-        private string[] CreatParameters(List<TUS> tus)
+        private string[] CreatParameters(List<TUSS> tus)
         {
             var parameters = new List<string>();
 
             parameters.Add("Id");
             return parameters.ToArray();
         }
-
-
 
         private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
         {
@@ -156,8 +137,7 @@ namespace EHRLucene.Domain
             return parser;
         }
 
-
-        private IEnumerable<TUS> _SimpleSearch(string searchQuery)
+        private IEnumerable<TUSS> _SimpleSearch(string searchQuery)
         {
             searchQuery = _removeSpecialCharacters(searchQuery);
 
@@ -173,7 +153,6 @@ namespace EHRLucene.Domain
                 searcher.Dispose();
 
                 return results;
-
             }
         }
 
@@ -201,9 +180,9 @@ namespace EHRLucene.Domain
             return query;
         }
 
-        private IEnumerable<TUS> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
+        private IEnumerable<TUSS> _mapLuceneToDataList(IEnumerable<ScoreDoc> hits, IndexSearcher searcher)
         {
-            var tus = new List<TUS>();
+            var tus = new List<TUSS>();
 
             foreach (var scoreDoc in hits)
             {
@@ -213,14 +192,14 @@ namespace EHRLucene.Domain
             return tus;
         }
 
-        private TUS _mapLuceneDocumentToData(Document doc)
+        private TUSS _mapLuceneDocumentToData(Document doc)
         {
-            var tus = new TUS()
-            {
-                Id = short.Parse(doc.Get("Id")),
-                Description = doc.Get("Description"),
-                Code = doc.Get("Code"),
-            };
+            var tus = new TUSS
+                          {
+                              Id = short.Parse(doc.Get("Id")),
+                              Description = doc.Get("Description"),
+                              Code = doc.Get("Code"),
+                          };
 
             return tus;
         }
@@ -235,5 +214,34 @@ namespace EHRLucene.Domain
                 writer.Dispose();
             }
         }
+
+        private void EntryPath(string path)
+        {
+            IndexDirectory = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath ?? path, "lucene_index_Tus");
+        }
+
+        private void AddToIndex(TUSS treatment, IndexWriter writer)
+        {
+            //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
+            // RemoveIndex(treatment, writer);
+            var doc = new Document();
+            AddFields(treatment, doc);
+            writer.AddDocument(doc);
+        }
+
+        private void AddFields(TUSS tus, Document doc)
+        {
+            doc.Add(new Field("Id", tus.Id.ToString(CultureInfo.InvariantCulture), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Description", tus.Description.ToLower(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Code", tus.Code.ToLower(), Field.Store.YES, Field.Index.ANALYZED));
+        }
+
+        private void RemoveIndex(TUSS tus, IndexWriter writer)
+        {
+            var searchQuery = new TermQuery(new Term("Id", tus.Id.ToString(CultureInfo.InvariantCulture)));
+            writer.DeleteDocuments(searchQuery);
+        }
+
+        #endregion
     }
 }

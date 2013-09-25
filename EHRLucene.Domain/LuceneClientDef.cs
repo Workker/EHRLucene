@@ -6,6 +6,7 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Web;
@@ -14,37 +15,36 @@ using Version = Lucene.Net.Util.Version;
 
 namespace EHRLucene.Domain
 {
-    public class LuceneClientDef
+    public class LuceneClientDEF
     {
-
-        public LuceneClientDef(string path)
-        {
-            InformarPath(path);
-            CriarDiretorio();
-
-        }
-
-        private void InformarPath(string path)
-        {
-            _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_Def");
-        }
-
-        public void CriarDiretorio()
-        {
-            if (!System.IO.Directory.Exists(_luceneDir)) System.IO.Directory.CreateDirectory(_luceneDir);
-        }
-
-        public string _luceneDir;
+        public string IndexDirectory;
         private FSDirectory _directoryTemp;
         private FSDirectory _directory
         {
             get
             {
-                if (_directoryTemp == null) _directoryTemp = FSDirectory.Open(new DirectoryInfo(_luceneDir));
+                if (_directoryTemp == null) _directoryTemp = FSDirectory.Open(new DirectoryInfo(IndexDirectory));
                 if (IndexWriter.IsLocked(_directoryTemp)) IndexWriter.Unlock(_directoryTemp);
-                var lockFilePath = Path.Combine(_luceneDir, "write.lock");
+                var lockFilePath = Path.Combine(IndexDirectory, "write.lock");
                 return _directoryTemp;
             }
+        }
+
+        #region Constructors
+
+        public LuceneClientDEF(string path)
+        {
+            EntryPath(path);
+            CreateDirectory();
+        }
+
+        #endregion
+
+        #region Public Methods
+
+        public IEnumerable<DEF> AdvancedSearch(List<DEF> defs)
+        {
+            return _AdvancedSearch(defs);
         }
 
         public void AddUpdateLuceneIndex(DEF patients)
@@ -65,6 +65,26 @@ namespace EHRLucene.Domain
             }
         }
 
+        public IEnumerable<DEF> SimpleSearch(string input)
+        {
+            return _inputIsNotNullOrEmpty(input) ? new List<DEF>() : _SimpleSearch(input);
+
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void EntryPath(string path)
+        {
+            IndexDirectory = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath ?? path, "lucene_index_Def");
+        }
+
+        private void CreateDirectory()
+        {
+            if (!System.IO.Directory.Exists(IndexDirectory)) System.IO.Directory.CreateDirectory(IndexDirectory);
+        }
+
         private void _addToLuceneIndex(DEF def, IndexWriter writer)
         {
             //Não precisa remover o tratamento, pois existem varios tratamentos com o id igual.
@@ -76,25 +96,14 @@ namespace EHRLucene.Domain
 
         private void AddFields(DEF def, Document doc)
         {
-            doc.Add(new Field("Id", def.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("Description", def.Description.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Id", def.Id.ToString(CultureInfo.InvariantCulture), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Description", def.Description.ToString(CultureInfo.InvariantCulture).ToLower(), Field.Store.YES, Field.Index.ANALYZED));
         }
 
         private void RemoveIndex(DEF def, IndexWriter writer)
         {
-            var searchQuery = new TermQuery(new Term("Id", def.Id.ToString()));
+            var searchQuery = new TermQuery(new Term("Id", def.Id.ToString(CultureInfo.InvariantCulture)));
             writer.DeleteDocuments(searchQuery);
-        }
-
-        public IEnumerable<DEF> SimpleSearch(string input)
-        {
-            return _inputIsNotNullOrEmpty(input) ? new List<DEF>() : _SimpleSearch(input);
-
-        }
-
-        public IEnumerable<DEF> AdvancedSearch(List<DEF> defs)
-        {
-            return _AdvancedSearch(defs);
         }
 
         private string TreatCharacters(List<DEF> defs)
@@ -106,11 +115,11 @@ namespace EHRLucene.Domain
             {
                 if (defs.Count > 1 && i < defs.Count)
                 {
-                    str += " Id:" + h.ToString() + " OR ";
+                    str += " Id:" + h.ToString(CultureInfo.InvariantCulture) + " OR ";
                 }
                 else
                 {
-                    str += " Id:" + h.ToString();
+                    str += " Id:" + h.ToString(CultureInfo.InvariantCulture);
                 }
                 i++;
             }
@@ -149,15 +158,12 @@ namespace EHRLucene.Domain
             return parameters.ToArray();
         }
 
-
-
         private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
         {
             var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Id" }, analyzer);
             parser.DefaultOperator = QueryParser.Operator.AND;
             return parser;
         }
-
 
         private IEnumerable<DEF> _SimpleSearch(string searchQuery)
         {
@@ -210,11 +216,11 @@ namespace EHRLucene.Domain
 
         private DEF _mapLuceneDocumentToData(Document doc)
         {
-            var def = new DEF()
-            {
-                Id = short.Parse(doc.Get("Id")),
-                Description = doc.Get("Description"),
-            };
+            var def = new DEF
+                          {
+                              Id = short.Parse(doc.Get("Id")),
+                              Description = doc.Get("Description"),
+                          };
 
             return def;
         }
@@ -230,5 +236,6 @@ namespace EHRLucene.Domain
             }
         }
 
+        #endregion
     }
 }
