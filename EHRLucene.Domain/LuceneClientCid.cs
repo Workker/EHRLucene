@@ -76,7 +76,7 @@ namespace EHRLucene.Domain
 
         private void EntryPath(string path)
         {
-            IndexDirectory = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath ?? path, "lucene_index_Cid");
+            IndexDirectory = Path.Combine(HttpContext.Current != null ? HttpContext.Current.Request.PhysicalApplicationPath : path, "lucene_index_Cid");
         }
 
         private void CreateDirectory()
