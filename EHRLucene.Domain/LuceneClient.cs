@@ -1,4 +1,5 @@
 ﻿using EHR.CoreShared;
+using EHR.CoreShared.Entities;
 using EHR.CoreShared.Interfaces;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;

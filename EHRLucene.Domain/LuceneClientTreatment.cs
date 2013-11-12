@@ -1,4 +1,5 @@
 ﻿using EHR.CoreShared;
+using EHR.CoreShared.Entities;
 using EHR.CoreShared.Interfaces;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -340,13 +341,10 @@ namespace EHRLucene.Domain
 
         private ITreatment _mapLuceneDocumentToData(Document doc)
         {
-            DbEnum valor;
-            var enumHospital = Enum.TryParse(doc.Get("Hospital"), true, out valor);
-
             var treatment = new Treatment()
             {
                 Id = doc.Get("Id"),
-                Hospital = enumHospital ? valor : DbEnum.sumario,
+                //Hospital = doc.Get("Hospital"), todo: Substituir por chamada a repositorio buscando o hospital do id retornado ou obter de uma lista.
                 CheckOutDate = Convert.ToDateTime(doc.Get("CheckOutDate")),
                 EntryDate = Convert.ToDateTime(doc.Get("EntryDate")),
             };
