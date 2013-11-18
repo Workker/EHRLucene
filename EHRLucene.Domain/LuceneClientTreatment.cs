@@ -1,6 +1,7 @@
-﻿using EHR.CoreShared;
+﻿using System.Globalization;
 using EHR.CoreShared.Entities;
 using EHR.CoreShared.Interfaces;
+using EHRIntegracao.Domain.Repository;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -64,7 +65,6 @@ namespace EHRLucene.Domain
                 foreach (var sampleData in sampleDatas) _addToLuceneIndex(sampleData, writer);
 
                 analyzer.Close();
-                writer.Dispose();
             }
         }
 
@@ -79,8 +79,8 @@ namespace EHRLucene.Domain
 
         private void AddFields(ITreatment treatment, Document doc)
         {
-            doc.Add(new Field("Id", treatment.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("Hospital", treatment.Hospital.ToString().ToLower(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Id", treatment.Id.ToString(CultureInfo.InvariantCulture), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Hospital", treatment.Hospital.Key, Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("CheckOutDate", treatment.CheckOutDate.ToShortDateString(), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("EntryDate", treatment.EntryDate.ToShortDateString(), Field.Store.YES, Field.Index.ANALYZED));
         }
@@ -110,10 +110,10 @@ namespace EHRLucene.Domain
             {
                 return _AdvancedSearch(medicalRecords);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
 
-                throw ex;
+                throw;
             }
 
         }
@@ -124,10 +124,10 @@ namespace EHRLucene.Domain
             {
                 return _AdvancedSearch(treatments);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
 
-                throw ex;
+                throw;
             }
 
         }
@@ -203,7 +203,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results;
             }
@@ -232,15 +231,13 @@ namespace EHRLucene.Domain
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
 
                 string[] array = CreatParameters();
-                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
-                parser.DefaultOperator = QueryParser.Operator.AND;
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer) { DefaultOperator = QueryParser.Operator.AND };
 
                 var query = parseQuery(searchQueryStr, parser);
                 var hits = searcher.Search(query, null, 300, Sort.RELEVANCE).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results;
             }
@@ -265,15 +262,12 @@ namespace EHRLucene.Domain
             return parameters.ToArray();
         }
 
-
-
         private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
         {
             var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Id" }, analyzer);
             parser.DefaultOperator = QueryParser.Operator.AND;
             return parser;
         }
-
 
         private IEnumerable<ITreatment> _SimpleSearch(string searchQuery)
         {
@@ -288,7 +282,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results;
 
@@ -333,7 +326,6 @@ namespace EHRLucene.Domain
             }
             catch (Exception)
             {
-
                 throw;
             }
 
@@ -341,14 +333,15 @@ namespace EHRLucene.Domain
 
         private ITreatment _mapLuceneDocumentToData(Document doc)
         {
+            var repository = new Hospitals();
+            var hospital = repository.GetBy(doc.Get("Hospital"));
             var treatment = new Treatment()
             {
                 Id = doc.Get("Id"),
-                //Hospital = doc.Get("Hospital"), todo: Substituir por chamada a repositorio buscando o hospital do id retornado ou obter de uma lista.
+                Hospital = hospital,
                 CheckOutDate = Convert.ToDateTime(doc.Get("CheckOutDate")),
                 EntryDate = Convert.ToDateTime(doc.Get("EntryDate")),
             };
-
             return treatment;
         }
 
@@ -359,7 +352,6 @@ namespace EHRLucene.Domain
             {
                 analyzer.Close();
                 writer.Optimize();
-                writer.Dispose();
             }
         }
 

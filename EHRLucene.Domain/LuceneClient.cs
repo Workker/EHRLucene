@@ -1,6 +1,6 @@
-﻿using EHR.CoreShared;
-using EHR.CoreShared.Entities;
+﻿using EHR.CoreShared.Entities;
 using EHR.CoreShared.Interfaces;
+using EHRIntegracao.Domain.Repository;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -9,6 +9,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Web;
@@ -65,7 +66,6 @@ namespace EHRLucene.Domain
             {
                 foreach (var sampleData in sampleDatas) _addToLuceneIndex(sampleData, writer);
                 analyzer.Close();
-                writer.Dispose();
             }
         }
 
@@ -113,7 +113,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results.First();
             }
@@ -132,7 +131,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results;
 
@@ -177,15 +175,15 @@ namespace EHRLucene.Domain
 
         private IPatient _mapLuceneDocumentToData(Document doc)
         {
-            DbEnum valor;
-            var enumHospital = Enum.TryParse(doc.Get("Hospital"), true, out valor);
+            var repository = new Hospitals();
+            var hospital = repository.GetBy(doc.Get("Hospital"));
 
             var patient = new Patient()
             {
                 Id = doc.Get("Id"),
                 Name = doc.Get("Name"),
                 CPF = doc.Get("CPF"),
-                Hospital = enumHospital ? valor : DbEnum.sumario,
+                Hospital = hospital,
             };
 
             if (!string.IsNullOrEmpty(doc.Get("DateBirthday")))
@@ -212,7 +210,6 @@ namespace EHRLucene.Domain
             {
                 analyzer.Close();
                 writer.Optimize();
-                writer.Dispose();
             }
         }
 
@@ -296,7 +293,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results;
             }
@@ -319,7 +315,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results;
             }
@@ -357,9 +352,9 @@ namespace EHRLucene.Domain
 
         private void AddFields(IPatient patient, Document doc)
         {
-            doc.Add(new Field("Id", patient.Id.ToString(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Id", patient.Id.ToString(CultureInfo.InvariantCulture), Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Name", patient.Name, Field.Store.YES, Field.Index.ANALYZED));
-            doc.Add(new Field("Hospital", patient.Hospital.ToString(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("Hospital", patient.Hospital.Key, Field.Store.YES, Field.Index.ANALYZED));
 
             if (patient.CheckOutDate.HasValue)
                 doc.Add(new Field("CheckOutDate", patient.CheckOutDate.Value.ToShortDateString(), Field.Store.YES, Field.Index.NOT_ANALYZED));

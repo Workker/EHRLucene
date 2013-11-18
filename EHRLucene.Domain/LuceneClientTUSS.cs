@@ -1,5 +1,4 @@
-﻿using EHR.CoreShared;
-using EHR.CoreShared.Entities;
+﻿using EHR.CoreShared.Entities;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -55,7 +54,6 @@ namespace EHRLucene.Domain
             {
                 foreach (var sampleData in sampleDatas) AddToIndex(sampleData, writer);
                 analyzer.Close();
-                writer.Dispose();
             }
         }
 
@@ -117,7 +115,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results;
             }
@@ -151,7 +148,6 @@ namespace EHRLucene.Domain
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
-                searcher.Dispose();
 
                 return results;
             }
@@ -212,7 +208,6 @@ namespace EHRLucene.Domain
             {
                 analyzer.Close();
                 writer.Optimize();
-                writer.Dispose();
             }
         }
 
