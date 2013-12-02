@@ -51,6 +51,7 @@
     <Compile Include="LuceneClient.cs" />
     <Compile Include="LuceneClientCID.cs" />
     <Compile Include="LuceneClientDEF.cs" />
+    <Compile Include="LuceneClientRecord.cs" />
     <Compile Include="LuceneClientTreatment.cs" />
     <Compile Include="LuceneClientTUSS.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

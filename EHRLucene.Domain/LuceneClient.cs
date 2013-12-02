@@ -371,7 +371,7 @@ namespace EHRLucene.Domain
 
         private void RemoveIndex(IPatient patient, IndexWriter writer)
         {
-            var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString()));
+            var searchQuery = new TermQuery(new Term("Id", patient.Id.ToString(CultureInfo.InvariantCulture)));
             writer.DeleteDocuments(searchQuery);
         }
     }
