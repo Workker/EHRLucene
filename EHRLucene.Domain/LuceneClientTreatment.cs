@@ -173,20 +173,20 @@ namespace EHRLucene.Domain
             var str = "";
 
             var i = 1;
-            foreach (var h in records.Select(m => m.Code))
+            foreach (var record in records)
             {
                 if (records.Count > 1 && i < records.Count)
                 {
-                    str += " (Id:" + h + " ) OR ";
+                    str += " (Id:" + record.Code + " AND Hospital:" +record.Hospital.Key + " ) OR ";
                 }
                 else
                 {
-                    str += " Id:" + h;
+                    str += " Id:" + record.Code + " AND Hospital:" + record.Hospital.Key;
                 }
                 i++;
             }
 
-            str += " Hospital: " + records.FirstOrDefault().Hospital.Key;
+            //str += " Hospital: " + records.FirstOrDefault().Hospital.Key;
 
             return str;
         }
