@@ -75,7 +75,29 @@ namespace EHRLucene.Domain
 
         private void EntryPath(string path)
         {
-            IndexDirectory = Path.Combine(HttpContext.Current != null ? HttpContext.Current.Request.PhysicalApplicationPath : path, "lucene_index_Cid");
+            if (HttpContext.Current != null)
+            {
+                if (HttpContext.Current.Request.PhysicalApplicationPath != null)
+                {
+                    IndexDirectory = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_cid");
+                }
+                else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(IndexDirectory))
+                {
+                    IndexDirectory = "C:\\lucene_index_cid";
+                }
+                else
+                {
+                    IndexDirectory = path;
+                }
+            }
+            else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(IndexDirectory))
+            {
+                IndexDirectory = "C:\\lucene_index_cid";
+            }
+            else
+            {
+                IndexDirectory = path;
+            }
         }
 
         private void CreateDirectory()

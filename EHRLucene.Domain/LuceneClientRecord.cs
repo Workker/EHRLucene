@@ -47,44 +47,51 @@ namespace EHRLucene.Domain
 
         #region Methods
 
-        public void AddRecordsOnIndexFromPatient(IPatient patient)
+        public void AddRecordsOnIndexFromPatient(IList<IPatient> patients)
         {
-            foreach (var sampleData in patient.Records) AddToIndex(sampleData, patient.Id);
+            foreach (var patient in patients) AddToIndex(patient.Records, patient.GetCPF());
+
+            Optimize();
         }
 
-        public void AddToIndex(Record record, string patientId)
+        public void AddRecordsOnIndexFromPatient(IPatient patient)
+        {
+            foreach (var sampleData in patient.Records) AddToIndex(sampleData, patient.GetCPF());
+        }
+
+        public void AddToIndex(Record record, string patientCPF)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(Directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
             {
                 RemoveIndex(record, writer);
                 var doc = new Document();
-                AddFields(record, doc, patientId);
+                AddFields(record, doc, patientCPF);
                 writer.AddDocument(doc);
                 analyzer.Close();
             }
-            Optimize();
+            //Optimize();
         }
 
-        public void AddToIndex(IEnumerable<Record> records, string patientId)
+        public void AddToIndex(IEnumerable<Record> records, string patientCPF)
         {
-            foreach (var sampleData in records) AddToIndex(sampleData, patientId);
+            foreach (var sampleData in records) AddToIndex(sampleData, patientCPF);
         }
 
-        public IEnumerable<Record> SearchBy(string patientId)
+        public IEnumerable<Record> SearchBy(string patientCPF)
         {
-            return _inputIsNotNullOrEmpty(patientId) ? new List<Record>() : _SearchBy(patientId);
+            return _inputIsNotNullOrEmpty(patientCPF) ? new List<Record>() : _SearchBy(patientCPF);
         }
 
-        private IEnumerable<Record> _SearchBy(string patientId)
+        private IEnumerable<Record> _SearchBy(string patientCPF)
         {
-            patientId = _removeSpecialCharacters(patientId);
+            patientCPF = _removeSpecialCharacters(patientCPF);
 
             using (var searcher = new IndexSearcher(Directory, false))
             {
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
-                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "PatientId" }, analyzer);
-                var query = parseQuery(patientId, parser);
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "PatientCPF" }, analyzer);
+                var query = parseQuery(patientCPF, parser);
                 var hits = searcher.Search(query, 10).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
 
@@ -119,9 +126,9 @@ namespace EHRLucene.Domain
             return record;
         }
 
-        private void AddFields(Record record, Document doc, string patientId)
+        private void AddFields(Record record, Document doc, string patientCPF)
         {
-            doc.Add(new Field("Id", patientId, Field.Store.YES, Field.Index.ANALYZED));
+            doc.Add(new Field("PatientCPF", patientCPF, Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Code", record.Code, Field.Store.YES, Field.Index.ANALYZED));
             doc.Add(new Field("Hospital", record.Hospital.Key, Field.Store.YES, Field.Index.ANALYZED));
         }
@@ -134,7 +141,29 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            _luceneDir = string.IsNullOrEmpty(path) ? Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath ?? "C:\\", "lucene_index_record") : path;
+            if (HttpContext.Current != null)
+            {
+                if (HttpContext.Current.Request.PhysicalApplicationPath != null)
+                {
+                    _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_record");
+                }
+                else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(_luceneDir))
+                {
+                    _luceneDir = "C:\\lucene_index_record";
+                }
+                else
+                {
+                    _luceneDir = path;
+                }
+            }
+            else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(_luceneDir))
+            {
+                _luceneDir = "C:\\lucene_index_record";
+            }
+            else
+            {
+                _luceneDir = path;
+            }
         }
 
         private void CreateDirectory()

@@ -213,7 +213,29 @@ namespace EHRLucene.Domain
 
         private void EntryPath(string path)
         {
-            IndexDirectory = Path.Combine(HttpContext.Current != null ? HttpContext.Current.Request.PhysicalApplicationPath : path, "lucene_index_Tus");
+            if (HttpContext.Current != null)
+            {
+                if (HttpContext.Current.Request.PhysicalApplicationPath != null)
+                {
+                    IndexDirectory = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_tus");
+                }
+                else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(IndexDirectory))
+                {
+                    IndexDirectory = "C:\\lucene_index_tus";
+                }
+                else
+                {
+                    IndexDirectory = path;
+                }
+            }
+            else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(IndexDirectory))
+            {
+                IndexDirectory = "C:\\lucene_index_tus";
+            }
+            else
+            {
+                IndexDirectory = path;
+            }
         }
 
         private void AddToIndex(TUSS treatment, IndexWriter writer)

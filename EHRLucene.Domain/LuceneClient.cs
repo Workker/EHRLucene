@@ -215,9 +215,24 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            if (string.IsNullOrEmpty(path))
+            if (HttpContext.Current != null)
             {
-                _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index");
+                if (HttpContext.Current.Request.PhysicalApplicationPath != null)
+                {
+                    _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_patient");
+                }
+                else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(_luceneDir))
+                {
+                    _luceneDir = "C:\\lucene_index_patient";
+                }
+                else
+                {
+                    _luceneDir = path;
+                }
+            }
+            else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(_luceneDir))
+            {
+                _luceneDir = "C:\\lucene_index_patient";
             }
             else
             {

@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using EHR.CoreShared.Entities;
+﻿using EHR.CoreShared.Entities;
 using EHR.CoreShared.Interfaces;
 using EHRIntegracao.Domain.Repository;
 using Lucene.Net.Analysis.Standard;
@@ -10,14 +9,14 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Web;
 using Version = Lucene.Net.Util.Version;
 
 namespace EHRLucene.Domain
 {
-
-
     public class LuceneClientTreatment
     {
 
@@ -30,7 +29,29 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            _luceneDir = Path.Combine("lucene_index_Treatment");
+            if (HttpContext.Current != null)
+            {
+                if (HttpContext.Current.Request.PhysicalApplicationPath != null)
+                {
+                    _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_treatment");
+                }
+                else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(_luceneDir))
+                {
+                    _luceneDir = "C:\\lucene_index_treatment";
+                }
+                else
+                {
+                    _luceneDir = path;
+                }
+            }
+            else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(_luceneDir))
+            {
+                _luceneDir = "C:\\lucene_index_treatment";
+            }
+            else
+            {
+                _luceneDir = path;
+            }
         }
 
         public void CriarDiretorio()
@@ -104,11 +125,11 @@ namespace EHRLucene.Domain
 
         }
 
-        public IEnumerable<ITreatment> AdvancedSearch(List<Record> medicalRecords)
+        public IEnumerable<ITreatment> SearchBy(List<Record> records)
         {
             try
             {
-                return _AdvancedSearch(medicalRecords);
+                return _SearchBy(records);
             }
             catch (Exception)
             {
@@ -116,6 +137,58 @@ namespace EHRLucene.Domain
                 throw;
             }
 
+        }
+
+        private IEnumerable<ITreatment> _SearchBy(List<Record> records)
+        {
+            var searchQueryStr = TreatCharacters(records);
+
+            using (var searcher = new IndexSearcher(_directory, false))
+            {
+                var analyzer = new StandardAnalyzer(Version.LUCENE_30);
+
+                string[] array = CreatParameters(records);
+                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
+                parser.DefaultOperator = QueryParser.Operator.AND;
+
+                var query = parseQuery(searchQueryStr, parser);
+                var hits = searcher.Search(query, null, 300, Sort.INDEXORDER).ScoreDocs;
+                var results = _mapLuceneToDataList(hits, searcher);
+
+                analyzer.Close();
+
+                return results;
+            }
+        }
+
+        private string[] CreatParameters(List<Record> hospital)
+        {
+            var parameters = new List<string> {"Id", "Hospital"};
+
+            return parameters.ToArray();
+        }
+
+        private string TreatCharacters(List<Record> records)
+        {
+            var str = "";
+
+            var i = 1;
+            foreach (var h in records.Select(m => m.Code))
+            {
+                if (records.Count > 1 && i < records.Count)
+                {
+                    str += " (Id:" + h + " ) OR ";
+                }
+                else
+                {
+                    str += " Id:" + h;
+                }
+                i++;
+            }
+
+            str += " Hospital: " + records.FirstOrDefault().Hospital.Key;
+
+            return str;
         }
 
         public IEnumerable<ITreatment> AdvancedPeriodicSearch(List<ITreatment> treatments)
@@ -130,29 +203,6 @@ namespace EHRLucene.Domain
                 throw;
             }
 
-        }
-
-        private string TreatCharacters(List<Record> medicalRecords)
-        {
-            var str = "";
-
-            var i = 1;
-            foreach (var h in medicalRecords.Select(m => m.Code))
-            {
-                if (medicalRecords.Count > 1 && i < medicalRecords.Count)
-                {
-                    str += " (Id:" + h + " ) OR ";
-                }
-                else
-                {
-                    str += " Id:" + h;
-                }
-                i++;
-            }
-
-            str += " Hospital: " + medicalRecords.FirstOrDefault().Hospital.ToString().ToLower();
-
-            return str;
         }
 
         private string TreatCharacters(List<ITreatment> treatmentDtos)
@@ -184,28 +234,6 @@ namespace EHRLucene.Domain
             }
 
             return str;
-        }
-
-        private IEnumerable<ITreatment> _AdvancedSearch(List<Record> medicalRecords)
-        {
-            var searchQueryStr = TreatCharacters(medicalRecords);
-
-            using (var searcher = new IndexSearcher(_directory, false))
-            {
-                var analyzer = new StandardAnalyzer(Version.LUCENE_30);
-
-                string[] array = CreatParameters(medicalRecords);
-                var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
-                parser.DefaultOperator = QueryParser.Operator.AND;
-
-                var query = parseQuery(searchQueryStr, parser);
-                var hits = searcher.Search(query, null, 300, Sort.RELEVANCE).ScoreDocs;
-                var results = _mapLuceneToDataList(hits, searcher);
-
-                analyzer.Close();
-
-                return results;
-            }
         }
 
         private Query CreateQuery(string queryStr)
@@ -253,14 +281,7 @@ namespace EHRLucene.Domain
             return parameters.ToArray();
         }
 
-        private string[] CreatParameters(List<Record> hospital)
-        {
-            var parameters = new List<string>();
 
-            parameters.Add("Id");
-            parameters.Add("Hospital");
-            return parameters.ToArray();
-        }
 
         private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
         {
