@@ -1,6 +1,5 @@
 ﻿using EHR.CoreShared.Entities;
 using EHR.CoreShared.Interfaces;
-using EHRIntegracao.Domain.Repository;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -47,40 +46,36 @@ namespace EHRLucene.Domain
 
         #region Methods
 
-        public void AddRecordsOnIndexFromPatient(IList<IPatient> patients)
-        {
-            foreach (var patient in patients) AddToIndex(patient.Records, patient.GetCPF());
-
-            Optimize();
-        }
-
-        public void AddRecordsOnIndexFromPatient(IPatient patient)
-        {
-            foreach (var sampleData in patient.Records) AddToIndex(sampleData, patient.GetCPF());
-        }
-
-        public void AddToIndex(Record record, string patientCPF)
+        public void AddRecordsOnIndexFrom(IList<IPatient> patients)
         {
             var analyzer = new StandardAnalyzer(Version.LUCENE_30);
             using (var writer = new IndexWriter(Directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED))
             {
-                RemoveIndex(record, writer);
-                var doc = new Document();
-                AddFields(record, doc, patientCPF);
-                writer.AddDocument(doc);
+                foreach (var patient in patients)
+                {
+                    foreach (var record in patient.Records)
+                    {
+                        AddToIndex(record, patient.GetCPF(), writer);
+                    }
+                }
+
                 analyzer.Close();
             }
-            //Optimize();
-        }
 
-        public void AddToIndex(IEnumerable<Record> records, string patientCPF)
-        {
-            foreach (var sampleData in records) AddToIndex(sampleData, patientCPF);
+            Optimize();
         }
 
         public IEnumerable<Record> SearchBy(string patientCPF)
         {
             return _inputIsNotNullOrEmpty(patientCPF) ? new List<Record>() : _SearchBy(patientCPF);
+        }
+
+        private void AddToIndex(Record record, string patientCPF, IndexWriter indexWriter)
+        {
+            RemoveIndex(record, patientCPF, indexWriter);
+            var doc = new Document();
+            AddFields(record, doc, patientCPF);
+            indexWriter.AddDocument(doc);
         }
 
         private IEnumerable<Record> _SearchBy(string patientCPF)
@@ -108,19 +103,15 @@ namespace EHRLucene.Domain
             {
                 records.Add(_mapLuceneDocumentToData(searcher.Doc(hit.Doc)));
             }
-            //hits.Select(hit => _mapLuceneDocumentToData(searcher.Doc(hit.Doc))).ToList();
             return records;
         }
 
         private Record _mapLuceneDocumentToData(Document doc)
         {
-            var repository = new Hospitals();
-            var hospital = repository.GetBy(doc.Get("Hospital"));
-
             var record = new Record()
             {
                 Code = doc.Get("Code"),
-                Hospital = hospital,
+                Hospital = new Hospital { Key = doc.Get("Hospital") },
             };
 
             return record;
@@ -133,10 +124,13 @@ namespace EHRLucene.Domain
             doc.Add(new Field("Hospital", record.Hospital.Key, Field.Store.YES, Field.Index.ANALYZED));
         }
 
-        private void RemoveIndex(Record record, IndexWriter writer)
+        private void RemoveIndex(Record record, string patientCPF, IndexWriter writer)
         {
-            var searchQuery = new TermQuery(new Term("Code", record.Code));
-            writer.DeleteDocuments(searchQuery);
+            var queryString = " (PatientCPF:" + patientCPF;
+            queryString += " AND Code:" + record.Code;
+            queryString += " AND Hospital:" + record.Hospital.Key + " )";
+
+            writer.DeleteDocuments(CreateQuery(queryString));
         }
 
         private void InformarPath(string path)
@@ -203,6 +197,24 @@ namespace EHRLucene.Domain
         private bool _inputIsNotNullOrEmpty(string input)
         {
             return string.IsNullOrEmpty(input);
+        }
+
+        private Query CreateQuery(string queryStr)
+        {
+            var analyzer = new StandardAnalyzer(Version.LUCENE_30);
+            string[] array = CreatParameters();
+            var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
+            parser.DefaultOperator = QueryParser.Operator.AND;
+            return parseQuery(queryStr, parser);
+        }
+
+        private string[] CreatParameters()
+        {
+            var parameters = new List<string>();
+            parameters.Add("PatientCPF");
+            parameters.Add("Code");
+            parameters.Add("Hospital");
+            return parameters.ToArray();
         }
 
         #endregion

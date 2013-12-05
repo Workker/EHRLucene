@@ -1,6 +1,5 @@
 ﻿using EHR.CoreShared.Entities;
 using EHR.CoreShared.Interfaces;
-using EHRIntegracao.Domain.Repository;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -11,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Web;
 using Version = Lucene.Net.Util.Version;
 
@@ -163,7 +161,7 @@ namespace EHRLucene.Domain
 
         private string[] CreatParameters(List<Record> hospital)
         {
-            var parameters = new List<string> {"Id", "Hospital"};
+            var parameters = new List<string> { "Id", "Hospital" };
 
             return parameters.ToArray();
         }
@@ -177,7 +175,7 @@ namespace EHRLucene.Domain
             {
                 if (records.Count > 1 && i < records.Count)
                 {
-                    str += " (Id:" + record.Code + " AND Hospital:" +record.Hospital.Key + " ) OR ";
+                    str += " (Id:" + record.Code + " AND Hospital:" + record.Hospital.Key + " ) OR ";
                 }
                 else
                 {
@@ -281,8 +279,6 @@ namespace EHRLucene.Domain
             return parameters.ToArray();
         }
 
-
-
         private MultiFieldQueryParser CreateParser(StandardAnalyzer analyzer)
         {
             var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Id" }, analyzer);
@@ -354,12 +350,10 @@ namespace EHRLucene.Domain
 
         private ITreatment _mapLuceneDocumentToData(Document doc)
         {
-            var repository = new Hospitals();
-            var hospital = repository.GetBy(doc.Get("Hospital"));
             var treatment = new Treatment()
             {
                 Id = doc.Get("Id"),
-                Hospital = hospital,
+                Hospital = new Hospital { Key = doc.Get("Hospital") },
                 CheckOutDate = Convert.ToDateTime(doc.Get("CheckOutDate")),
                 EntryDate = Convert.ToDateTime(doc.Get("EntryDate")),
             };

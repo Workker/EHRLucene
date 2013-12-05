@@ -1,6 +1,5 @@
 ﻿using EHR.CoreShared.Entities;
 using EHR.CoreShared.Interfaces;
-using EHRIntegracao.Domain.Repository;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -80,9 +79,9 @@ namespace EHRLucene.Domain
 
         }
 
-        public IEnumerable<IPatient> AdvancedSearch(IPatient patient, List<string> hospital)
+        public IEnumerable<IPatient> AdvancedSearch(IPatient patient, List<string> hospitalKeys)
         {
-            return patient == null ? new List<IPatient>() : _AdvancedSearch(patient, hospital);
+            return patient == null ? new List<IPatient>() : _AdvancedSearch(patient, hospitalKeys);
         }
 
         public IEnumerable<IPatient> AdvancedSearch(List<IPatient> patients)
@@ -175,15 +174,12 @@ namespace EHRLucene.Domain
 
         private IPatient _mapLuceneDocumentToData(Document doc)
         {
-            var repository = new Hospitals();
-            var hospital = repository.GetBy(doc.Get("Hospital"));
-
             var patient = new Patient()
             {
                 Id = doc.Get("Id"),
                 Name = doc.Get("Name"),
                 CPF = doc.Get("CPF"),
-                Hospital = hospital,
+                Hospital = new Hospital { Key = doc.Get("Hospital") },
             };
 
             if (!string.IsNullOrEmpty(doc.Get("DateBirthday")))
@@ -240,7 +236,7 @@ namespace EHRLucene.Domain
             }
         }
 
-        private string TreatCharacters(IPatient patient, List<string> hospital)
+        private string TreatCharacters(IPatient patient, List<string> hospitalKeys)
         {
             var str = "Name:";
             str += _removeSpecialCharacters(patient.Name);
@@ -252,9 +248,9 @@ namespace EHRLucene.Domain
             }
 
             var i = 1;
-            foreach (var h in hospital)
+            foreach (var h in hospitalKeys)
             {
-                if (hospital.Count > 1 && i < hospital.Count)
+                if (hospitalKeys.Count > 1 && i < hospitalKeys.Count)
                 {
                     str += " Hospital:" + h + " OR ";
                 }
@@ -289,16 +285,16 @@ namespace EHRLucene.Domain
             return str;
         }
 
-        private IEnumerable<IPatient> _AdvancedSearch(IPatient searchQuery, List<string> hospital)
+        private IEnumerable<IPatient> _AdvancedSearch(IPatient searchQuery, List<string> hospitalKeys)
         {
-            var searchQueryStr = TreatCharacters(searchQuery, hospital);
+            var searchQueryStr = TreatCharacters(searchQuery, hospitalKeys);
 
             using (var searcher = new IndexSearcher(_directory, false))
             {
 
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
 
-                string[] array = CreatParameters(searchQuery, hospital);
+                string[] array = CreatParameters(searchQuery, hospitalKeys);
                 var parser = new MultiFieldQueryParser(Version.LUCENE_30, array, analyzer);
                 if (array.Count() > 1)
                     parser.DefaultOperator = QueryParser.Operator.AND;
@@ -341,7 +337,7 @@ namespace EHRLucene.Domain
             return parameters.ToArray();
         }
 
-        private string[] CreatParameters(IPatient searchQuery, List<string> hospital)
+        private string[] CreatParameters(IPatient searchQuery, List<string> hospitalKeys)
         {
             var parameters = new List<string>();
 
@@ -351,7 +347,7 @@ namespace EHRLucene.Domain
             if (!string.IsNullOrEmpty(searchQuery.DateBirthday.ToString()) && searchQuery.DateBirthday.ToString() != "//")
                 parameters.Add("DateBirthday");
 
-            if (hospital != null && hospital.Count > 0)
+            if (hospitalKeys != null && hospitalKeys.Count > 0)
                 parameters.Add("Hospital");
 
             return parameters.ToArray();
