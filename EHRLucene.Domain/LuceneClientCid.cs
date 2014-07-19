@@ -6,6 +6,7 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -83,7 +84,7 @@ namespace EHRLucene.Domain
                 }
                 else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(IndexDirectory))
                 {
-                    IndexDirectory = "C:\\lucene_index_cid";
+                    IndexDirectory = ConfigurationManager.AppSettings["CIDIndexPath"];
                 }
                 else
                 {
@@ -92,7 +93,7 @@ namespace EHRLucene.Domain
             }
             else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(IndexDirectory))
             {
-                IndexDirectory = "C:\\lucene_index_cid";
+                IndexDirectory = ConfigurationManager.AppSettings["CIDIndexPath"];
             }
             else
             {
