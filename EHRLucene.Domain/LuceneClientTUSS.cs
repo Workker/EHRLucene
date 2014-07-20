@@ -145,7 +145,7 @@ namespace EHRLucene.Domain
                 var analyzer = new StandardAnalyzer(Version.LUCENE_30);
                 var parser = new MultiFieldQueryParser(Version.LUCENE_30, new[] { "Description" }, analyzer);
                 var query = parseQuery(searchQuery, parser);
-                var hits = searcher.Search(query, null, 10, Sort.RELEVANCE).ScoreDocs;
+                var hits = searcher.Search(query, null, 10, new Sort(new SortField("Description", SortField.STRING))).ScoreDocs;
                 var results = _mapLuceneToDataList(hits, searcher);
 
                 analyzer.Close();
