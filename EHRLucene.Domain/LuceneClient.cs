@@ -185,15 +185,15 @@ namespace EHRLucene.Domain
 
             if (!string.IsNullOrEmpty(doc.Get("DateBirthday")))
             {
-                patient.DateBirthday = Convert.ToDateTime(doc.Get("DateBirthday"));
+                patient.DateBirthday = DateTime.Parse(doc.Get("DateBirthday"), CultureInfo.GetCultureInfo("pt-br") );
             }
             if (!string.IsNullOrEmpty(doc.Get("CheckOutDate")))
             {
-                patient.DateBirthday = Convert.ToDateTime(doc.Get("CheckOutDate"));
+                patient.DateBirthday = DateTime.Parse(doc.Get("CheckOutDate"), CultureInfo.GetCultureInfo("pt-br"));
             }
             if (!string.IsNullOrEmpty(doc.Get("EntryDate")))
             {
-                patient.EntryDate = Convert.ToDateTime(doc.Get("EntryDate"));
+                patient.EntryDate = DateTime.Parse(doc.Get("EntryDate"), CultureInfo.GetCultureInfo("pt-br"));
             }
 
 
@@ -212,29 +212,15 @@ namespace EHRLucene.Domain
 
         private void InformarPath(string path)
         {
-            if (HttpContext.Current != null)
+            if (string.IsNullOrEmpty(path) && HttpContext.Current != null)
             {
                 if (HttpContext.Current.Request.PhysicalApplicationPath != null)
-                {
                     _luceneDir = Path.Combine(HttpContext.Current.Request.PhysicalApplicationPath, "lucene_index_patient");
-                }
-                else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(_luceneDir))
-                {
-                    _luceneDir = ConfigurationManager.AppSettings["PatientIndexPath"];
-                }
-                else
-                {
-                    _luceneDir = path;
-                }
+
+                return;
             }
-            else if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(_luceneDir))
-            {
-                _luceneDir = ConfigurationManager.AppSettings["PatientIndexPath"];
-            }
-            else
-            {
-                _luceneDir = path;
-            }
+
+            _luceneDir = path;
         }
 
         private string TreatCharacters(IPatient patient, List<string> hospitalKeys)
